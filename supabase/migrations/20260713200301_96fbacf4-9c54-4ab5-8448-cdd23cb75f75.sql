@@ -1,0 +1,1 @@
+ALTER TABLE public.system_parameterizations DROP CONSTRAINT IF EXISTS system_parameterizations_form_type_check; ALTER TABLE public.system_parameterizations ADD CONSTRAINT system_parameterizations_form_type_check CHECK (form_type = ANY (ARRAY['nfe'::text, 'nfce'::text, 'mdfe'::text, 'cte'::text, 'nfse'::text]));

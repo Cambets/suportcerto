@@ -1,0 +1,2 @@
+ALTER TABLE public.system_parameterizations ADD COLUMN IF NOT EXISTS form_types text[] NOT NULL DEFAULT ARRAY['nfe']::text[];
+UPDATE public.system_parameterizations SET form_types = ARRAY[form_type::text] WHERE form_types IS NULL OR array_length(form_types,1) IS NULL;

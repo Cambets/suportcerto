@@ -2,17 +2,23 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isSupabaseAdminConfigured } from "@/integrations/supabase/client.server";
 
 export const listKnowledge = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const supabase = context?.supabase || (await import("@/integrations/supabase/client.server")).supabaseAdmin;
-    const { data, error } = await supabase
-      .from("knowledge_entries")
-      .select("id, title, content, tags, created_by, created_at, updated_at")
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    if (!isSupabaseAdminConfigured()) return [];
+    try {
+      const supabase = context?.supabase || (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+      const { data, error } = await supabase
+        .from("knowledge_entries")
+        .select("id, title, content, tags, created_by, created_at, updated_at")
+        .order("created_at", { ascending: false });
+      if (error) return [];
+      return data ?? [];
+    } catch {
+      return [];
+    }
   });
 
 const upsertSchema = z.object({

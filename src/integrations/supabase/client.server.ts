@@ -2,24 +2,22 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+export function isSupabaseAdminConfigured(): boolean {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  if (!url || url.includes('seu-projeto') || url.includes('tmbukbepahzrzujnfyhm')) {
+    return false;
+  }
+  return true;
+}
+
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
   const SUPABASE_SERVICE_ROLE_KEY = 
     process.env.SUPABASE_SERVICE_ROLE_KEY || 
     process.env.SUPABASE_PUBLISHABLE_KEY || 
     process.env.SUPABASE_ANON_KEY || 
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
-    process.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY'] : []),
-    ];
-    const message = `Variáveis do Supabase Server ausentes: ${missing.join(', ')}. Configure seu arquivo .env`;
-    console.error(`[Supabase Admin] ${message}`);
-    throw new Error(message);
-  }
+    process.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {

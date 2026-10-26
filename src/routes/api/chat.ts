@@ -3,7 +3,7 @@ import { convertToModelMessages, generateText, streamText, type UIMessage } from
 
 import { createAiProvider } from "@/lib/ai-gateway.server";
 import { searchKnowledge } from "@/lib/knowledge-search.server";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabaseAdmin, isSupabaseAdminConfigured } from "@/integrations/supabase/client.server";
 import { SYSTEM_PROMPT_TEMPLATE, GERAL_SYSTEM_PROMPT_TEMPLATE } from "@/lib/system-prompt";
 import { fetchViabilidadeMarca } from "@/services/infosimples.server";
 import {
@@ -42,17 +42,19 @@ export const Route = createFileRoute("/api/chat")({
           return new Response("Bad request", { status: 400 });
         }
 
-        // Verify thread existence and get visitor info (Supabase com fallback Local)
+        // Recuperação instantânea da conversa
         let thread: any = null;
-        try {
-          const { data } = await supabaseAdmin
-            .from("threads")
-            .select("*")
-            .eq("id", threadId)
-            .maybeSingle();
-          thread = data;
-        } catch (threadErr) {
-          console.warn("[api/chat] Supabase thread lookup fallback:", threadErr);
+        if (isSupabaseAdminConfigured()) {
+          try {
+            const { data } = await supabaseAdmin
+              .from("threads")
+              .select("*")
+              .eq("id", threadId)
+              .maybeSingle();
+            thread = data;
+          } catch (threadErr) {
+            console.warn("[api/chat] Supabase thread lookup fallback:", threadErr);
+          }
         }
 
         if (!thread) {
@@ -78,7 +80,7 @@ export const Route = createFileRoute("/api/chat")({
           if (token === "admin-local-dev") {
             userId = "admin-local-dev";
             isPrivileged = true;
-          } else {
+          } else if (isSupabaseAdminConfigured()) {
             try {
               const { data: userData } = await supabaseAdmin.auth.getUser(token);
               userId = userData?.user?.id ?? null;
@@ -240,22 +242,24 @@ DADOS DO VISITANTE IDENTIFICADO:
         const template = effectiveMode === "geral" ? GERAL_SYSTEM_PROMPT_TEMPLATE : SYSTEM_PROMPT_TEMPLATE;
         const system = template(kbContext + brandContext + visitorInfo);
 
-        // Persist user message in Local Store + Supabase
+        // Persistência rápida da mensagem do usuário
         if (last?.role === "user" && lastText) {
           addLocalMessage(threadId, {
             role: "user",
             content: lastText,
           });
 
-          try {
-            await supabaseAdmin.from("messages").insert({
-              thread_id: threadId,
-              user_id: thread.user_id as string | undefined,
-              role: "user",
-              content: lastText,
-            });
-          } catch (mErr) {
-            console.warn("[chat] Supabase persist user message failed:", mErr);
+          if (isSupabaseAdminConfigured()) {
+            try {
+              await supabaseAdmin.from("messages").insert({
+                thread_id: threadId,
+                user_id: thread.user_id as string | undefined,
+                role: "user",
+                content: lastText,
+              });
+            } catch (mErr) {
+              console.warn("[chat] Supabase persist user message failed:", mErr);
+            }
           }
 
           // Auto-title from first user message
@@ -275,13 +279,16 @@ DADOS DO VISITANTE IDENTIFICADO:
               title = words.slice(0, 60) || "Nova conversa";
             }
             renameLocalThread(threadId, title);
-            try {
-              await supabaseAdmin
-                .from("threads")
-                .update({ title, updated_at: new Date().toISOString() })
-                .eq("id", threadId);
-            } catch {}
-          } else {
+
+            if (isSupabaseAdminConfigured()) {
+              try {
+                await supabaseAdmin
+                  .from("threads")
+                  .update({ title, updated_at: new Date().toISOString() })
+                  .eq("id", threadId);
+              } catch {}
+            }
+          } else if (isSupabaseAdminConfigured()) {
             try {
               await supabaseAdmin
                 .from("threads")
@@ -313,15 +320,17 @@ DADOS DO VISITANTE IDENTIFICADO:
               content: text,
             });
 
-            try {
-              await supabaseAdmin.from("messages").insert({
-                thread_id: threadId,
-                user_id: thread.user_id as string | undefined,
-                role: "assistant",
-                content: text,
-              });
-            } catch (insertErr) {
-              console.warn("[chat] persist assistant to Supabase failed:", insertErr);
+            if (isSupabaseAdminConfigured()) {
+              try {
+                await supabaseAdmin.from("messages").insert({
+                  thread_id: threadId,
+                  user_id: thread.user_id as string | undefined,
+                  role: "assistant",
+                  content: text,
+                });
+              } catch (insertErr) {
+                console.warn("[chat] persist assistant to Supabase failed:", insertErr);
+              }
             }
           },
         });

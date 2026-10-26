@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabaseAdmin, isSupabaseAdminConfigured } from "@/integrations/supabase/client.server";
 import { SEFAZ_REJEICOES, SEFAZ_CONCEITOS, findRejeicaoByCode } from "@/data/sefaz-rejeicoes";
 import { getErpKnowledgeContext } from "@/data/erp-knowledge";
 
@@ -101,30 +101,32 @@ export async function searchKnowledge(question: string, limit = 4): Promise<stri
   }
 
   let dbContext = "";
-  try {
-    const { data, error } = await supabaseAdmin
-      .from("knowledge_entries")
-      .select("title, content, tags")
-      .limit(200);
+  if (isSupabaseAdminConfigured()) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("knowledge_entries")
+        .select("title, content, tags")
+        .limit(200);
 
-    if (!error && data && data.length > 0) {
-      const scored = data.map((entry) => {
-        const haystack = tokenize(`${entry.title} ${entry.content} ${(entry.tags ?? []).join(" ")}`);
-        const hay = new Set(haystack);
-        const score = tokens.reduce((acc, t) => acc + (hay.has(t) ? 1 : 0), 0);
-        return { entry, score };
-      });
+      if (!error && data && data.length > 0) {
+        const scored = data.map((entry) => {
+          const haystack = tokenize(`${entry.title} ${entry.content} ${(entry.tags ?? []).join(" ")}`);
+          const hay = new Set(haystack);
+          const score = tokens.reduce((acc, t) => acc + (hay.has(t) ? 1 : 0), 0);
+          return { entry, score };
+        });
 
-      scored.sort((a, b) => b.score - a.score);
-      const top = scored.filter((s) => s.score > 0).slice(0, limit);
-      if (top.length > 0) {
-        dbContext = top
-          .map(({ entry }) => `### ${entry.title}\n${entry.content}`)
-          .join("\n\n---\n\n");
+        scored.sort((a, b) => b.score - a.score);
+        const top = scored.filter((s) => s.score > 0).slice(0, limit);
+        if (top.length > 0) {
+          dbContext = top
+            .map(({ entry }) => `### ${entry.title}\n${entry.content}`)
+            .join("\n\n---\n\n");
+        }
       }
+    } catch (err) {
+      console.error("[searchKnowledge] Erro ao consultar Supabase:", err);
     }
-  } catch (err) {
-    console.error("[searchKnowledge] Erro ao consultar Supabase:", err);
   }
 
   const parts = [sefazContext, erpContext, dbContext].filter(Boolean);

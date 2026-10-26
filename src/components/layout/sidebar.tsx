@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import logoSrc from "@/assets/logo_certifica.svg";
 import { useThreads } from "@/hooks/use-threads";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { checkIsAdmin } from "@/lib/admin.functions";
 
@@ -24,7 +24,15 @@ export function Sidebar() {
     if (hasLocalDev) {
       setIsAdmin(true);
       setIsSuporte(true);
+      return;
     }
+
+    if (!isSupabaseConfigured()) {
+      setIsAdmin(false);
+      setIsSuporte(false);
+      return;
+    }
+
     supabase.auth.getUser()
       .then(async ({ data }) => {
         if (!data?.user && !hasLocalDev) return;

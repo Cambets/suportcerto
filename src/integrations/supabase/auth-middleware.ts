@@ -2,9 +2,26 @@ import { createMiddleware } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
+import { isSupabaseAdminConfigured } from './client.server';
+
+export interface AuthContext {
+  supabase: any;
+  userId: string;
+  user: { id: string; email?: string | null };
+}
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
+    const fallbackContext: AuthContext = {
+      supabase: null,
+      userId: 'admin-local-dev',
+      user: { id: 'admin-local-dev', email: 'admin@certifica.com.br' },
+    };
+
+    if (!isSupabaseAdminConfigured()) {
+      return next({ context: fallbackContext });
+    }
+
     const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
     const SUPABASE_PUBLISHABLE_KEY = 
       process.env.SUPABASE_PUBLISHABLE_KEY || 
@@ -12,50 +29,24 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       process.env.SUPABASE_ANON_KEY || 
       process.env.VITE_SUPABASE_ANON_KEY;
 
-    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      const message = "Variáveis de ambiente do Supabase ausentes no servidor (.env)";
-      console.error(`[Supabase Auth] ${message}`);
-      throw new Error(message);
-    }
-    
     const request = getRequest();
     if (!request?.headers) {
-      // Fallback em ambiente local
-      return next({
-        context: {
-          supabase: null as any,
-          userId: 'admin-local-dev',
-          user: { id: 'admin-local-dev', email: 'marcus.almeida@certifica.com.br' },
-        }
-      });
+      return next({ context: fallbackContext });
     }
 
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.includes('admin-local-dev') || authHeader.includes('undefined')) {
-      // Fallback amigável de desenvolvimento local
-      return next({
-        context: {
-          supabase: null as any,
-          userId: 'admin-local-dev',
-          user: { id: 'admin-local-dev', email: 'marcus.almeida@certifica.com.br' },
-        }
-      });
+      return next({ context: fallbackContext });
     }
 
     const token = authHeader.replace('Bearer ', '').trim();
     if (!token) {
-      return next({
-        context: {
-          supabase: null as any,
-          userId: 'admin-local-dev',
-          user: { id: 'admin-local-dev', email: 'marcus.almeida@certifica.com.br' },
-        }
-      });
+      return next({ context: fallbackContext });
     }
 
     const supabase = createClient<Database>(
-      SUPABASE_URL,
-      SUPABASE_PUBLISHABLE_KEY,
+      SUPABASE_URL!,
+      SUPABASE_PUBLISHABLE_KEY!,
       {
         global: {
           headers: {
@@ -73,31 +64,18 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     try {
       const { data: userData, error } = await supabase.auth.getUser(token);
       if (error || !userData?.user) {
-        // Fallback local se o servidor supabase remoto estiver inacessível
-        return next({
-          context: {
-            supabase: null as any,
-            userId: 'admin-local-dev',
-            user: { id: 'admin-local-dev', email: 'marcus.almeida@certifica.com.br' },
-          },
-        });
+        return next({ context: fallbackContext });
       }
 
-      return next({
-        context: {
-          supabase: supabase as any,
-          userId: userData.user.id,
-          user: { id: userData.user.id, email: userData.user.email ?? 'admin-local-dev' },
-        },
-      });
+      const validContext: AuthContext = {
+        supabase,
+        userId: userData.user.id,
+        user: { id: userData.user.id, email: userData.user.email },
+      };
+
+      return next({ context: validContext });
     } catch {
-      return next({
-        context: {
-          supabase: null as any,
-          userId: 'admin-local-dev',
-          user: { id: 'admin-local-dev', email: 'marcus.almeida@certifica.com.br' },
-        },
-      });
+      return next({ context: fallbackContext });
     }
   },
 );

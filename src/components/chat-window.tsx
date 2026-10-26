@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAudioTranscriber } from "@/hooks/use-audio-transcriber";
 import { checkIsAdmin } from "@/lib/admin.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 
 import {
   Conversation,
@@ -66,7 +66,15 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
     if (hasLocalDev) {
       setCanSeeSuporte(true);
       setRoleChecked(true);
+      return;
     }
+
+    if (!isSupabaseConfigured()) {
+      setCanSeeSuporte(false);
+      setRoleChecked(true);
+      return;
+    }
+
     supabase.auth.getUser()
       .then(async ({ data }) => {
         if (!data?.user) {
@@ -110,10 +118,13 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
         visitorId: typeof window !== "undefined" ? localStorage.getItem("visitor_id") || "anonymous" : "anonymous",
       }),
       headers: async (): Promise<Record<string, string>> => {
+        if (typeof window !== "undefined" && localStorage.getItem("visitor_id") === "admin-local-dev") {
+          return { Authorization: "Bearer admin-local-dev" };
+        }
+        if (!isSupabaseConfigured()) {
+          return {};
+        }
         try {
-          if (typeof window !== "undefined" && localStorage.getItem("visitor_id") === "admin-local-dev") {
-            return { Authorization: "Bearer admin-local-dev" };
-          }
           const { data } = await supabase.auth.getSession();
           const token = data?.session?.access_token;
           return token ? { Authorization: `Bearer ${token}` } : {};

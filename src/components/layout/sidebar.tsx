@@ -25,29 +25,40 @@ export function Sidebar() {
       setIsAdmin(true);
       setIsSuporte(true);
     }
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user && !hasLocalDev) return;
-      try {
-        const res = await checkIsAdminFn();
-        if (!cancelled) {
-          setIsAdmin(res.isAdmin || hasLocalDev);
-          setIsSuporte(res.isSuporte || hasLocalDev);
+    supabase.auth.getUser()
+      .then(async ({ data }) => {
+        if (!data?.user && !hasLocalDev) return;
+        try {
+          const res = await checkIsAdminFn();
+          if (!cancelled) {
+            setIsAdmin(res.isAdmin || hasLocalDev);
+            setIsSuporte(res.isSuporte || hasLocalDev);
+          }
+        } catch {
+          if (hasLocalDev && !cancelled) {
+            setIsAdmin(true);
+            setIsSuporte(true);
+          }
         }
-      } catch {
+      })
+      .catch(() => {
         if (hasLocalDev && !cancelled) {
           setIsAdmin(true);
           setIsSuporte(true);
         }
-      }
-    });
+      });
     return () => { cancelled = true; };
   }, [checkIsAdminFn]);
 
   async function handleLogout() {
     localStorage.removeItem("visitor_info");
     localStorage.removeItem("visitor_id");
-    await supabase.auth.signOut().catch(() => {});
-    navigate({ to: "/auth", replace: true });
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // offline fallback
+    }
+    navigate({ to: "/login", replace: true });
   }
 
 

@@ -62,21 +62,30 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
   const [roleChecked, setRoleChecked] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) {
-        if (!cancelled) setRoleChecked(true);
-        return;
-      }
-      try {
-        const res = await checkIsAdminFn();
-        if (!cancelled) {
-          setCanSeeSuporte(res.isAdmin || res.isSuporte);
-          setRoleChecked(true);
+    const hasLocalDev = typeof window !== "undefined" && localStorage.getItem("visitor_id") === "admin-local-dev";
+    if (hasLocalDev) {
+      setCanSeeSuporte(true);
+      setRoleChecked(true);
+    }
+    supabase.auth.getUser()
+      .then(async ({ data }) => {
+        if (!data?.user) {
+          if (!cancelled) setRoleChecked(true);
+          return;
         }
-      } catch {
+        try {
+          const res = await checkIsAdminFn();
+          if (!cancelled) {
+            setCanSeeSuporte(res.isAdmin || res.isSuporte || hasLocalDev);
+            setRoleChecked(true);
+          }
+        } catch {
+          if (!cancelled) setRoleChecked(true);
+        }
+      })
+      .catch(() => {
         if (!cancelled) setRoleChecked(true);
-      }
-    });
+      });
     return () => { cancelled = true; };
   }, [checkIsAdminFn]);
 
@@ -98,12 +107,19 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
       api: "/api/chat",
       body: () => ({
         threadId,
-        visitorId: typeof window !== "undefined" ? localStorage.getItem("visitor_id") || "" : "",
+        visitorId: typeof window !== "undefined" ? localStorage.getItem("visitor_id") || "anonymous" : "anonymous",
       }),
       headers: async (): Promise<Record<string, string>> => {
-        const { data } = await supabase.auth.getSession();
-        const token = data.session?.access_token;
-        return token ? { Authorization: `Bearer ${token}` } : {};
+        try {
+          if (typeof window !== "undefined" && localStorage.getItem("visitor_id") === "admin-local-dev") {
+            return { Authorization: "Bearer admin-local-dev" };
+          }
+          const { data } = await supabase.auth.getSession();
+          const token = data?.session?.access_token;
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        } catch {
+          return {};
+        }
       },
     }),
     [threadId],

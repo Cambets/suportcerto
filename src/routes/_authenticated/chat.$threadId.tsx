@@ -19,10 +19,14 @@ function ChatThreadPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["thread", threadId],
     queryFn: () => {
-      const visitorId = typeof window !== "undefined" ? localStorage.getItem("visitor_id") || "" : "";
+      let visitorId = typeof window !== "undefined" ? localStorage.getItem("visitor_id") : "";
+      if (!visitorId) {
+        visitorId = "visitor-" + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem("visitor_id", visitorId);
+      }
       return fetchThread({ data: { threadId, visitorId } });
     },
-    retry: false,
+    retry: 1,
   });
 
   const missing = !isLoading && data != null && data.thread == null;
@@ -35,7 +39,12 @@ function ChatThreadPage() {
   }, [missing, navigate, qc]);
 
   if (isLoading || !data || missing) {
-    return <div className="flex h-full items-center justify-center text-muted-foreground">Carregando...</div>;
+    return (
+      <div className="flex h-full items-center justify-center text-muted-foreground gap-2">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="text-sm">Carregando conversa...</span>
+      </div>
+    );
   }
 
   return (
@@ -47,4 +56,3 @@ function ChatThreadPage() {
     />
   );
 }
-

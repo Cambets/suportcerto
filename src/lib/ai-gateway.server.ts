@@ -1,53 +1,58 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
+function sanitizeKey(val?: string | null): string {
+  if (!val) return "";
+  return val.trim().replace(/^["']|["']$/g, "").trim();
+}
+
 export function createAiProvider() {
   // 1. Google Gemini (Endpoint oficial OpenAI-Compatible)
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (geminiKey && geminiKey.trim()) {
+  const geminiKey = sanitizeKey(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+  if (geminiKey) {
     return {
       provider: createOpenAICompatible({
         name: "google-gemini",
         baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
-        apiKey: geminiKey.trim(),
+        apiKey: geminiKey,
       }),
       defaultModel: "gemini-3.5-flash-lite",
     };
   }
 
   // 2. OpenAI Oficial
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (openaiKey && openaiKey.trim()) {
+  const openaiKey = sanitizeKey(process.env.OPENAI_API_KEY);
+  if (openaiKey) {
     return {
       provider: createOpenAICompatible({
         name: "openai",
         baseURL: "https://api.openai.com/v1",
-        apiKey: openaiKey.trim(),
+        apiKey: openaiKey,
       }),
       defaultModel: "gpt-4o-mini",
     };
   }
 
   // 3. OpenRouter
-  const openrouterKey = process.env.OPENROUTER_API_KEY;
-  if (openrouterKey && openrouterKey.trim()) {
+  const openrouterKey = sanitizeKey(process.env.OPENROUTER_API_KEY);
+  if (openrouterKey) {
     return {
       provider: createOpenAICompatible({
         name: "openrouter",
         baseURL: "https://openrouter.ai/api/v1",
-        apiKey: openrouterKey.trim(),
+        apiKey: openrouterKey,
       }),
       defaultModel: "google/gemini-2.5-flash",
     };
   }
 
   // 4. Fallback retrocompatível (Lovable AI Gateway)
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  if (lovableKey && lovableKey.trim()) {
+  const lovableKey = sanitizeKey(process.env.LOVABLE_API_KEY);
+  if (lovableKey) {
     return {
       provider: createOpenAICompatible({
         name: "lovable-ai-gateway",
         baseURL: "https://ai.gateway.lovable.dev/v1",
-        headers: { "Lovable-API-Key": lovableKey.trim() },
+        headers: { "Lovable-API-Key": lovableKey },
       }),
       defaultModel: "google/gemini-3-flash-preview",
     };
@@ -59,11 +64,12 @@ export function createAiProvider() {
 }
 
 export function createLovableAiGatewayProvider(apiKey?: string) {
-  if (apiKey) {
+  const cleanKey = sanitizeKey(apiKey);
+  if (cleanKey) {
     return createOpenAICompatible({
       name: "custom-gateway",
       baseURL: "https://ai.gateway.lovable.dev/v1",
-      headers: { "Lovable-API-Key": apiKey },
+      headers: { "Lovable-API-Key": cleanKey },
     });
   }
   return createAiProvider().provider;

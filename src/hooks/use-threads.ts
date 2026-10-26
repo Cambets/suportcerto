@@ -18,21 +18,36 @@ export function useThreads() {
   const { data: threads = [], isLoading } = useQuery({
     queryKey: ["threads"],
     queryFn: async () => {
-      const visitorId = localStorage.getItem("visitor_id");
-      if (!visitorId) return [];
-      return listThreadsFn({ data: { visitorId } });
+      let visitorId = typeof window !== "undefined" ? localStorage.getItem("visitor_id") : "";
+      if (!visitorId) {
+        visitorId = "visitor-" + Math.random().toString(36).substring(2, 10);
+        if (typeof window !== "undefined") localStorage.setItem("visitor_id", visitorId);
+      }
+      try {
+        return await listThreadsFn({ data: { visitorId } });
+      } catch (err) {
+        console.warn("[useThreads] Falha ao carregar lista de conversas:", err);
+        return [];
+      }
     },
   });
 
   const createMutation = useMutation({
     mutationFn: () => {
-      const visitorJson = localStorage.getItem("visitor_info");
-      const visitor = visitorJson ? JSON.parse(visitorJson) : {};
-      const visitorId = localStorage.getItem("visitor_id") || "";
+      const visitorJson = typeof window !== "undefined" ? localStorage.getItem("visitor_info") : null;
+      let visitor: any = {};
+      try {
+        if (visitorJson) visitor = JSON.parse(visitorJson);
+      } catch {}
+      let visitorId = typeof window !== "undefined" ? localStorage.getItem("visitor_id") : "";
+      if (!visitorId) {
+        visitorId = "visitor-" + Math.random().toString(36).substring(2, 10);
+        if (typeof window !== "undefined") localStorage.setItem("visitor_id", visitorId);
+      }
       return createThreadFn({
         data: {
           visitorId,
-          visitorName: visitor.name,
+          visitorName: visitor.name || "Visitante",
           visitorEmail: visitor.email,
           visitorPhone: visitor.phone,
           visitorDocument: visitor.document,
@@ -54,13 +69,13 @@ export function useThreads() {
   const deleteMutation = useMutation({
     mutationFn: (threadId: string) =>
       deleteThreadFn({
-        data: { threadId, visitorId: localStorage.getItem("visitor_id") || "" },
+        data: { threadId, visitorId: localStorage.getItem("visitor_id") || "anonymous" },
       }),
-    onSuccess: () => {
+    onSuccess: (_, threadId) => {
       qc.invalidateQueries({ queryKey: ["threads"] });
       toast.success("Conversa excluída");
-      if (activeId === activeId) {
-        navigate({ to: "/" });
+      if (activeId === threadId) {
+        navigate({ to: "/chat" });
       }
     },
     onError: (error) => {
@@ -71,7 +86,7 @@ export function useThreads() {
   const renameMutation = useMutation({
     mutationFn: ({ threadId, title }: { threadId: string; title: string }) => 
       renameThreadFn({
-        data: { threadId, title, visitorId: localStorage.getItem("visitor_id") || "" },
+        data: { threadId, title, visitorId: localStorage.getItem("visitor_id") || "anonymous" },
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["threads"] });

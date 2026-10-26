@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { SEFAZ_REJEICOES, SEFAZ_CONCEITOS, findRejeicaoByCode } from "@/data/sefaz-rejeicoes";
+import { getErpKnowledgeContext } from "@/data/erp-knowledge";
 
 const STOPWORDS = new Set([
   "a","o","as","os","de","da","do","das","dos","e","ou","para","por","com","sem","um","uma","uns","umas",
@@ -92,9 +93,12 @@ function searchSefazRejeicoesContext(question: string, maxItems = 2): string {
 
 export async function searchKnowledge(question: string, limit = 4): Promise<string> {
   const sefazContext = searchSefazRejeicoesContext(question);
+  const erpContext = getErpKnowledgeContext(question, 2);
 
   const tokens = tokenize(question);
-  if (tokens.length === 0) return sefazContext;
+  if (tokens.length === 0) {
+    return [sefazContext, erpContext].filter(Boolean).join("\n\n---\n\n");
+  }
 
   let dbContext = "";
   try {
@@ -123,6 +127,6 @@ export async function searchKnowledge(question: string, limit = 4): Promise<stri
     console.error("[searchKnowledge] Erro ao consultar Supabase:", err);
   }
 
-  const parts = [sefazContext, dbContext].filter(Boolean);
+  const parts = [sefazContext, erpContext, dbContext].filter(Boolean);
   return parts.join("\n\n---\n\n");
 }

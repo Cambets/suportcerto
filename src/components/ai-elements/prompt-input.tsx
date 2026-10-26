@@ -956,6 +956,7 @@ export type PromptInputTextareaProps = ComponentProps<
 export const PromptInputTextarea = ({
   onChange,
   onKeyDown,
+  onPaste,
   className,
   placeholder = "What would you like to know?",
   ...props
@@ -1013,6 +1014,11 @@ export const PromptInputTextarea = ({
 
   const handlePaste: ClipboardEventHandler<HTMLTextAreaElement> = useCallback(
     (event) => {
+      onPaste?.(event);
+      if (event.defaultPrevented) {
+        return;
+      }
+
       const items = event.clipboardData?.items;
 
       if (!items) {
@@ -1035,7 +1041,7 @@ export const PromptInputTextarea = ({
         attachments.add(files);
       }
     },
-    [attachments]
+    [onPaste, attachments]
   );
 
   const handleCompositionEnd = useCallback(() => setIsComposing(false), []);

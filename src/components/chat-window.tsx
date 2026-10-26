@@ -1,8 +1,8 @@
 import { useChat } from "@ai-sdk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Send, Loader2, Mic, Square, Paperclip, X, Lightbulb, AlertTriangle } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Send, Loader2, Mic, Square, Paperclip, X, Lightbulb, AlertTriangle, Volume2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DefaultChatTransport } from "ai";
 
@@ -175,23 +175,139 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
 
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isTranscribingFile, setIsTranscribingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const addFiles = (files: FileList | File[] | null) => {
-    if (!files) return;
-    const list = Array.from(files).filter((f) => {
-      if (!f.type.startsWith("image/")) {
-        toast.error(`"${f.name}" não é uma imagem.`);
-        return false;
-      }
-      if (f.size > 8 * 1024 * 1024) {
-        toast.error(`"${f.name}" excede 8MB.`);
-        return false;
-      }
-      return true;
-    });
-    if (list.length) setAttachments((prev) => [...prev, ...list].slice(0, 5));
+  const isImageFile = (file: File): boolean => {
+    if (file.type && file.type.startsWith("image/")) return true;
+    return /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(file.name || "");
   };
+
+  const isAudioFile = (file: File): boolean => {
+    if (file.type && (file.type.startsWith("audio/") || file.type.startsWith("video/ogg"))) return true;
+    return /\.(mp3|wav|ogg|m4a|webm|aac|flac|oga|wma)$/i.test(file.name || "");
+  };
+
+  const transcribeAudioFile = async (file: File) => {
+    setIsTranscribingFile(true);
+    const toastId = toast.loading(`Transcrevendo áudio "${file.name}"...`);
+    try {
+      const fd = new FormData();
+      fd.append("audio", file);
+      const res = await fetch("/api/transcribe", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Falha ao transcrever áudio");
+      const text = (data?.text || "").trim();
+      if (text) {
+        const current = textInput.value.trim();
+        const next = current ? `${current}\n${text}` : text;
+        textInput.setInput(next);
+        toast.success("Áudio transcrito com sucesso!", { id: toastId });
+      } else {
+        toast.info("Nenhuma fala detectada no áudio enviado.", { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Erro na transcrição do áudio", { id: toastId });
+    } finally {
+      setIsTranscribingFile(false);
+    }
+  };
+
+  const addFiles = useCallback((files: FileList | File[] | null) => {
+    if (!files) return;
+    const incoming = Array.from(files);
+    const validImages: File[] = [];
+    const validAudios: File[] = [];
+
+    for (const f of incoming) {
+      if (f.size > 20 * 1024 * 1024) {
+        toast.error(`"${f.name}" excede o limite de 20MB.`);
+        continue;
+      }
+      if (isImageFile(f)) {
+        validImages.push(f);
+      } else if (isAudioFile(f)) {
+        validAudios.push(f);
+      } else {
+        toast.error(`"${f.name}" não é uma imagem nem um áudio suportado.`);
+      }
+    }
+
+    if (validImages.length > 0) {
+      setAttachments((prev) => [...prev, ...validImages].slice(0, 5));
+      toast.success(
+        validImages.length === 1
+          ? "Imagem adicionada com sucesso!"
+          : `${validImages.length} imagens adicionadas com sucesso!`
+      );
+    }
+
+    if (validAudios.length > 0) {
+      setAttachments((prev) => [...prev, ...validAudios].slice(0, 5));
+      validAudios.forEach((audioFile) => {
+        transcribeAudioFile(audioFile);
+      });
+    }
+  }, [textInput]);
+
+  const handlePasteEvent = useCallback((e: React.ClipboardEvent | ClipboardEvent) => {
+    const clipboardData =
+      (e as React.ClipboardEvent).clipboardData || (e as ClipboardEvent).clipboardData;
+    if (!clipboardData) return;
+
+    const filesFromList = Array.from(clipboardData.files || []);
+    const filesFromItems: File[] = [];
+
+    if (clipboardData.items) {
+      for (let i = 0; i < clipboardData.items.length; i++) {
+        const item = clipboardData.items[i];
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) {
+            if (!file.name || file.name === "image.png") {
+              const namedFile = new File([file], `print-${Date.now()}.png`, {
+                type: file.type || "image/png",
+              });
+              filesFromItems.push(namedFile);
+            } else {
+              filesFromItems.push(file);
+            }
+          }
+        }
+      }
+    }
+
+    const allFiles = [...filesFromList, ...filesFromItems].filter(
+      (f, idx, arr) =>
+        arr.findIndex((other) => other.name === f.name && other.size === f.size) === idx
+    );
+
+    const validFiles = allFiles.filter((f) => isImageFile(f) || isAudioFile(f));
+    if (validFiles.length > 0) {
+      e.preventDefault();
+      addFiles(validFiles);
+    }
+  }, [addFiles]);
+
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      let hasFile = false;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === "file") {
+          hasFile = true;
+          break;
+        }
+      }
+      if (hasFile) {
+        handlePasteEvent(e);
+      }
+    };
+
+    window.addEventListener("paste", handleGlobalPaste);
+    return () => window.removeEventListener("paste", handleGlobalPaste);
+  }, [handlePasteEvent]);
 
   const filesToFileList = (files: File[]): FileList => {
     const dt = new DataTransfer();
@@ -202,9 +318,23 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
   const handleSubmit = (text: string) => {
     const hasText = text.trim().length > 0;
     if (!hasText && attachments.length === 0) return;
+
+    let promptText = text.trim();
+    if (!promptText) {
+      const hasImages = attachments.some(isImageFile);
+      const hasAudios = attachments.some(isAudioFile);
+      if (hasImages && hasAudios) {
+        promptText = "Analise a imagem e o áudio em anexo.";
+      } else if (hasImages) {
+        promptText = "Analise o(s) print(s) de erro em anexo.";
+      } else if (hasAudios) {
+        promptText = "Analise o áudio enviado.";
+      }
+    }
+
     sendMessage(
       {
-        text: hasText ? text : "Analise o(s) print(s) de erro em anexo.",
+        text: promptText,
         files: attachments.length ? filesToFileList(attachments) : undefined,
       },
       { body: { mode } },
@@ -217,6 +347,7 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
   return (
     <div
       className="flex flex-col h-full relative"
+      onPaste={handlePasteEvent}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes("Files")) {
           e.preventDefault();
@@ -235,8 +366,11 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
       }}
     >
       {isDragging && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-          <p className="text-primary font-medium">Solte a imagem aqui</p>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none backdrop-blur-xs">
+          <div className="bg-background/95 px-5 py-3 rounded-xl shadow-lg border flex items-center gap-3">
+            <Paperclip className="h-5 w-5 text-primary animate-bounce" />
+            <p className="text-primary font-medium text-sm">Solte sua imagem (print) ou áudio aqui</p>
+          </div>
         </div>
       )}
       {threadInfo && (
@@ -291,32 +425,52 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
       <div className="p-4 bg-background/80 backdrop-blur-sm border-t">
         <div className="max-w-3xl mx-auto">
           {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {attachments.map((f, i) => (
-                <div key={i} className="relative group">
-                  <img
-                    src={URL.createObjectURL(f)}
-                    alt={f.name}
-                    className="h-16 w-16 object-cover rounded-md border"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAttachments((prev) => prev.filter((_, idx) => idx !== i))
-                    }
-                    className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-90 hover:opacity-100"
-                    aria-label="Remover anexo"
+            <div className="flex flex-wrap gap-2 mb-2 p-1">
+              {attachments.map((f, i) => {
+                const isImg = isImageFile(f);
+                return (
+                  <div
+                    key={i}
+                    className="relative group rounded-lg overflow-hidden border bg-card shadow-xs transition-all hover:border-primary/40"
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
+                    {isImg ? (
+                      <img
+                        src={URL.createObjectURL(f)}
+                        alt={f.name}
+                        className="h-16 w-16 object-cover"
+                      />
+                    ) : (
+                      <div className="h-16 px-3 flex items-center gap-2.5 bg-muted/60 text-xs">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                          <Volume2 className="h-4 w-4" />
+                        </div>
+                        <div className="max-w-[130px] truncate">
+                          <p className="font-medium truncate text-foreground">{f.name}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {(f.size / 1024).toFixed(0)} KB {isTranscribingFile && "• Transcrevendo..."}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAttachments((prev) => prev.filter((_, idx) => idx !== i))
+                      }
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-90 hover:opacity-100 shadow-sm"
+                      aria-label="Remover anexo"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/jpg,image/webp"
+            accept="image/*,audio/*"
             multiple
             className="hidden"
             onChange={(e) => {
@@ -329,7 +483,8 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
             className="bg-muted/50 border-none shadow-none focus-within:ring-1 focus-within:ring-primary/20"
           >
             <PromptInputTextarea
-              placeholder="Digite sua mensagem ou anexe um print do erro da SEFAZ/ERP..."
+              onPaste={handlePasteEvent}
+              placeholder="Digite sua mensagem, cole imagens/áudios (Ctrl+V) ou grave pelo microfone..."
               className="min-h-[44px] max-h-40"
             />
 
@@ -340,7 +495,7 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
                   size="icon"
                   variant="ghost"
                   onClick={() => fileInputRef.current?.click()}
-                  title="Anexar imagem (print de erro)"
+                  title="Anexar imagem ou áudio (ou copie e cole com Ctrl+V)"
                   className="h-8 w-8 rounded-full"
                 >
                   <Paperclip className="h-4 w-4" />
@@ -350,12 +505,12 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
                   size="icon"
                   variant={recorder.state === "recording" ? "destructive" : "ghost"}
                   onClick={recorder.toggle}
-                  disabled={recorder.state === "processing"}
+                  disabled={recorder.state === "processing" || isTranscribingFile}
                   title={
                     recorder.state === "recording"
                       ? "Parar gravação"
                       : recorder.state === "processing"
-                        ? "Transcrevendo..."
+                        ? "Transcrevendo microfone..."
                         : "Gravar áudio"
                   }
                   className="h-8 w-8 rounded-full"
@@ -369,14 +524,19 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
                   )}
                 </Button>
                 {recorder.state === "recording" && (
-                  <span className="text-xs text-destructive animate-pulse">Gravando...</span>
+                  <span className="text-xs text-destructive animate-pulse font-medium">Gravando...</span>
                 )}
                 {recorder.state === "processing" && (
-                  <span className="text-xs text-muted-foreground">Transcrevendo áudio...</span>
+                  <span className="text-xs text-muted-foreground animate-pulse">Transcrevendo áudio...</span>
+                )}
+                {isTranscribingFile && (
+                  <span className="text-xs text-primary animate-pulse flex items-center gap-1 font-medium">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Transcrevendo arquivo de áudio...
+                  </span>
                 )}
               </PromptInputTools>
               <PromptInputSubmit
-                disabled={isLoading || (!textInput.value.trim() && attachments.length === 0)}
+                disabled={isLoading || isTranscribingFile || (!textInput.value.trim() && attachments.length === 0)}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 {isLoading ? (

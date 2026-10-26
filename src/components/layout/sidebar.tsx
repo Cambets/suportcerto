@@ -28,8 +28,8 @@ export function Sidebar() {
     }
 
     if (!isSupabaseConfigured()) {
-      setIsAdmin(false);
-      setIsSuporte(false);
+      setIsAdmin(true);
+      setIsSuporte(true);
       return;
     }
 

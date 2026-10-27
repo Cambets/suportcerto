@@ -13,6 +13,8 @@ export type NfeXmlExtract = {
     ultima_nfe?: string;
     cfop_estadual?: string;
     cfop_interestadual?: string;
+    cfop_entrada_estadual?: string;
+    cfop_entrada_interestadual?: string;
     // ICMS
     origem_mercadoria?: string;
     ind_ie_dest?: string;
@@ -145,8 +147,10 @@ export async function parseNfeXml(file: File): Promise<NfeXmlExtract | null> {
     nfe: {
       serie_nfe: s(ide.serie),
       ultima_nfe: s(ide.nNF),
-      cfop_estadual: sameUF ? cfop : undefined,
-      cfop_interestadual: sameUF === false ? cfop : undefined,
+      cfop_estadual: (cfop?.startsWith("5") || (!cfop?.startsWith("1") && !cfop?.startsWith("2") && sameUF)) ? cfop : undefined,
+      cfop_interestadual: (cfop?.startsWith("6") || (!cfop?.startsWith("1") && !cfop?.startsWith("2") && sameUF === false)) ? cfop : undefined,
+      cfop_entrada_estadual: (cfop?.startsWith("1") || (s(ide.tpNF) === "0" && sameUF)) ? cfop : undefined,
+      cfop_entrada_interestadual: (cfop?.startsWith("2") || (s(ide.tpNF) === "0" && sameUF === false)) ? cfop : undefined,
       // ICMS
       origem_mercadoria: s(icmsBlock?.orig),
       ind_ie_dest: s(dest.indIEDest),

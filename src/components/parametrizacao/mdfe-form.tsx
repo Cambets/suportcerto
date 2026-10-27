@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { CnpjInput } from "@/components/parametrizacao/cnpj-input";
 import { useCnpjLookup } from "@/hooks/use-cnpj-lookup";
+import { CFOP_OPTIONS } from "@/lib/fiscal-options";
 
 export type MdfeData = {
   // Aba 1
@@ -59,6 +60,8 @@ export type MdfeData = {
   mdfe_seguradora_cnpj?: string;
   mdfe_seguradora_apolice?: string;
   mdfe_chaves_referenciadas?: string;
+  mdfe_cfop_entrada?: string;
+  mdfe_cfop?: string;
   mdfe_observacoes?: string;
 };
 
@@ -634,6 +637,25 @@ function SeguroTab({ form, update }: T) {
             <Input value={form.mdfe_seguradora_apolice ?? ""} onChange={(e) => update("mdfe_seguradora_apolice", e.target.value)} placeholder="Apólice nº..." />
           </Field>
         </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="CFOP de Entrada / Aquisição de Carga">
+          <Combobox
+            options={CFOP_OPTIONS.filter((o) => o.value.startsWith("1") || o.value.startsWith("2"))}
+            value={form.mdfe_cfop_entrada}
+            onChange={(v) => update("mdfe_cfop_entrada", v)}
+            placeholder="Ex.: 1102, 1352, 2102, 2352..."
+          />
+        </Field>
+        <Field label="CFOP Padrão MDF-e (Transporte)">
+          <Combobox
+            options={CFOP_OPTIONS.filter((o) => o.hint?.includes("CT-e") || o.value.startsWith("5") || o.value.startsWith("6"))}
+            value={form.mdfe_cfop}
+            onChange={(v) => update("mdfe_cfop", v)}
+            placeholder="Ex.: 5352, 6352, 5102..."
+          />
+        </Field>
       </div>
 
       <Field label="Chaves de acesso de CT-e ou NF-e referenciadas">

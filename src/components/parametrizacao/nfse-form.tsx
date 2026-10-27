@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CnpjInput } from "@/components/parametrizacao/cnpj-input";
 import { useCnpjLookup, formatCnaeFromApi } from "@/hooks/use-cnpj-lookup";
-import { C_CLASS_TRIB_OPTIONS } from "@/lib/fiscal-options";
+import { C_CLASS_TRIB_OPTIONS, CFOP_OPTIONS } from "@/lib/fiscal-options";
 
 export type NfseData = {
   // Regime Tributário Federal
@@ -52,6 +52,8 @@ export type NfseData = {
   municipio_prestacao?: string;
   codigo_contribuinte?: string;
   codigo_item_livre?: string;
+  cfop_entrada?: string;
+  codigo_cfop?: string;
   incentivador_cultural?: boolean;
 
   // Aba 3 — Alíquotas
@@ -728,6 +730,22 @@ export function NfseForm({ form, update, onFinish, hideFinishButton, hideEmpresa
                   value={form.codigo_item_livre ?? ""}
                   onChange={(e) => update("codigo_item_livre", e.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder="000000"
+                />
+              </Field>
+              <Field label="CFOP de Entrada / Aquisição de Serviço">
+                <Combobox
+                  options={CFOP_OPTIONS.filter((o) => o.value.startsWith("1") || o.value.startsWith("2"))}
+                  value={form.cfop_entrada}
+                  onChange={(v) => update("cfop_entrada", v)}
+                  placeholder="Ex.: 1933 / 2933 - Aquisição de serviço tributado pelo ISSQN"
+                />
+              </Field>
+              <Field label="CFOP de Prestação de Serviço (Saída)">
+                <Combobox
+                  options={CFOP_OPTIONS.filter((o) => o.value.startsWith("5") || o.value.startsWith("6"))}
+                  value={form.codigo_cfop}
+                  onChange={(v) => update("codigo_cfop", v)}
+                  placeholder="Ex.: 5933 - Prestação de serviço tributado pelo ISSQN"
                 />
               </Field>
             </div>

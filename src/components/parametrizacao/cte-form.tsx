@@ -60,6 +60,7 @@ export type CteData = {
   indicador_tomador?: string;
   cfop?: string;
   cfop_nao_contrib?: string;
+  cfop_entrada?: string;
   cst?: string;
   cst_nao_contrib?: string;
   aliquota?: string;
@@ -574,20 +575,28 @@ export function CteForm({ form, update, onFinish, showFinishButton = true, hideE
                   placeholder="Selecione o perfil do tomador (Contribuinte / Não Contribuinte)..."
                 />
               </Field>
-              <Field label="CFOP (Tomador Contribuinte)">
+              <Field label="CFOP de Prestação (Tomador Contribuinte)">
                 <Combobox
-                  options={CFOP_OPTIONS.filter((o) => o.hint?.includes("CT-e") && !o.hint?.includes("Não Contrib."))}
+                  options={CFOP_OPTIONS.filter((o) => o.hint?.includes("CT-e") && !o.hint?.includes("Entrada") && !o.hint?.includes("Não Contrib."))}
                   value={form.cfop}
                   onChange={(v) => update("cfop", v)}
                   placeholder="Ex.: 5352 / 6352"
                 />
               </Field>
-              <Field label="CFOP (Tomador Não Contribuinte)">
+              <Field label="CFOP de Prestação (Tomador Não Contribuinte)">
                 <Combobox
-                  options={CFOP_OPTIONS.filter((o) => o.hint?.includes("CT-e") && o.hint?.includes("Não Contrib."))}
+                  options={CFOP_OPTIONS.filter((o) => o.hint?.includes("CT-e") && !o.hint?.includes("Entrada") && o.hint?.includes("Não Contrib."))}
                   value={form.cfop_nao_contrib}
                   onChange={(v) => update("cfop_nao_contrib", v)}
                   placeholder="Ex.: 5357 / 6357"
+                />
+              </Field>
+              <Field label="CFOP de Entrada de Transporte (Aquisição de Serviço)" className="md:col-span-2">
+                <Combobox
+                  options={CFOP_OPTIONS.filter((o) => o.hint?.includes("CT-e") && o.hint?.includes("Entrada"))}
+                  value={form.cfop_entrada}
+                  onChange={(v) => update("cfop_entrada", v)}
+                  placeholder="Ex.: 1352 / 1353 / 2352 / 2353 - Aquisição de serviço de transporte"
                 />
               </Field>
             </div>

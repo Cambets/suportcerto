@@ -73,23 +73,59 @@ export const IND_IE_DEST_OPTIONS: ComboboxOption[] = [
 ];
 
 export const CFOP_OPTIONS: ComboboxOption[] = [
-  { value: "5101", label: "Venda de produção do estabelecimento", hint: "Estadual" },
-  { value: "5102", label: "Venda de mercadoria adquirida ou recebida de terceiros", hint: "Estadual" },
-  { value: "5405", label: "Venda de mercadoria sujeita ao ST (substituído)", hint: "Estadual" },
-  { value: "5910", label: "Remessa em bonificação, doação ou brinde", hint: "Estadual" },
-  { value: "5933", label: "Prestação de serviço tributado pelo ISSQN", hint: "Estadual" },
-  { value: "6101", label: "Venda de produção do estabelecimento (Contribuinte)", hint: "Interestadual" },
-  { value: "6102", label: "Venda de mercadoria adquirida de terceiros (Contribuinte)", hint: "Interestadual" },
-  { value: "6107", label: "Venda de produção destinada a não contribuinte", hint: "Interestadual · Não Contrib." },
-  { value: "6108", label: "Venda de mercadoria adquirida de terceiros destinada a não contribuinte", hint: "Interestadual · Não Contrib." },
-  { value: "6404", label: "Venda de mercadoria sujeita ao ST (substituído)", hint: "Interestadual" },
-  // CT-e
-  { value: "5352", label: "Prestação de serviço de transporte a estabelecimento industrial", hint: "CT-e · Estadual" },
-  { value: "5353", label: "Prestação de serviço de transporte a estabelecimento comercial", hint: "CT-e · Estadual" },
-  { value: "5357", label: "Prestação de serviço de transporte a não contribuinte", hint: "CT-e · Estadual · Não Contrib." },
-  { value: "6352", label: "Prestação de serviço de transporte a estabelecimento industrial", hint: "CT-e · Interestadual" },
-  { value: "6353", label: "Prestação de serviço de transporte a estabelecimento comercial", hint: "CT-e · Interestadual" },
-  { value: "6357", label: "Prestação de serviço de transporte a não contribuinte", hint: "CT-e · Interestadual · Não Contrib." },
+  // Entrada Estadual (1xxx)
+  { value: "1101", label: "Compra para industrialização ou produção rural", hint: "Entrada · Estadual" },
+  { value: "1102", label: "Compra para comercialização", hint: "Entrada · Estadual" },
+  { value: "1201", label: "Devolução de venda de produção do estabelecimento", hint: "Entrada · Devolução · Estadual" },
+  { value: "1202", label: "Devolução de venda de mercadoria adquirida de terceiros", hint: "Entrada · Devolução · Estadual" },
+  { value: "1403", label: "Compra para comercialização em operação com mercadoria sujeita a ST", hint: "Entrada · ST · Estadual" },
+  { value: "1551", label: "Compra de bem para o ativo imobilizado", hint: "Entrada · Imobilizado · Estadual" },
+  { value: "1556", label: "Compra de material para uso ou consumo", hint: "Entrada · Uso/Consumo · Estadual" },
+  { value: "1910", label: "Entrada de bonificação, doação ou brinde", hint: "Entrada · Estadual" },
+  { value: "1933", label: "Aquisição de serviço tributado pelo ISSQN", hint: "Entrada · Serviço · Estadual" },
+  { value: "1949", label: "Outra entrada de mercadoria ou prestação de serviço não especificada", hint: "Entrada · Outras · Estadual" },
+  // CT-e Entrada Estadual
+  { value: "1352", label: "Aquisição de serviço de transporte por estabelecimento industrial", hint: "CT-e · Entrada · Estadual" },
+  { value: "1353", label: "Aquisição de serviço de transporte por estabelecimento comercial", hint: "CT-e · Entrada · Estadual" },
+  { value: "1357", label: "Aquisição de serviço de transporte por não contribuinte", hint: "CT-e · Entrada · Estadual" },
+
+  // Entrada Interestadual (2xxx)
+  { value: "2101", label: "Compra para industrialização ou produção rural", hint: "Entrada · Interestadual" },
+  { value: "2102", label: "Compra para comercialização", hint: "Entrada · Interestadual" },
+  { value: "2201", label: "Devolução de venda de produção do estabelecimento", hint: "Entrada · Devolução · Interestadual" },
+  { value: "2202", label: "Devolução de venda de mercadoria adquirida de terceiros", hint: "Entrada · Devolução · Interestadual" },
+  { value: "2403", label: "Compra para comercialização em operação com mercadoria sujeita a ST", hint: "Entrada · ST · Interestadual" },
+  { value: "2551", label: "Compra de bem para o ativo imobilizado", hint: "Entrada · Imobilizado · Interestadual" },
+  { value: "2556", label: "Compra de material para uso ou consumo", hint: "Entrada · Uso/Consumo · Interestadual" },
+  { value: "2910", label: "Entrada de bonificação, doação ou brinde", hint: "Entrada · Interestadual" },
+  { value: "2933", label: "Aquisição de serviço tributado pelo ISSQN", hint: "Entrada · Serviço · Interestadual" },
+  { value: "2949", label: "Outra entrada de mercadoria ou prestação de serviço não especificada", hint: "Entrada · Outras · Interestadual" },
+  // CT-e Entrada Interestadual
+  { value: "2352", label: "Aquisição de serviço de transporte por estabelecimento industrial", hint: "CT-e · Entrada · Interestadual" },
+  { value: "2353", label: "Aquisição de serviço de transporte por estabelecimento comercial", hint: "CT-e · Entrada · Interestadual" },
+  { value: "2357", label: "Aquisição de serviço de transporte por não contribuinte", hint: "CT-e · Entrada · Interestadual" },
+
+  // Saída Estadual (5xxx)
+  { value: "5101", label: "Venda de produção do estabelecimento", hint: "Saída · Estadual" },
+  { value: "5102", label: "Venda de mercadoria adquirida ou recebida de terceiros", hint: "Saída · Estadual" },
+  { value: "5405", label: "Venda de mercadoria sujeita ao ST (substituído)", hint: "Saída · Estadual" },
+  { value: "5910", label: "Remessa em bonificação, doação ou brinde", hint: "Saída · Estadual" },
+  { value: "5933", label: "Prestação de serviço tributado pelo ISSQN", hint: "Saída · Estadual" },
+  // CT-e Saída Estadual
+  { value: "5352", label: "Prestação de serviço de transporte a estabelecimento industrial", hint: "CT-e · Saída · Estadual" },
+  { value: "5353", label: "Prestação de serviço de transporte a estabelecimento comercial", hint: "CT-e · Saída · Estadual" },
+  { value: "5357", label: "Prestação de serviço de transporte a não contribuinte", hint: "CT-e · Saída · Estadual · Não Contrib." },
+
+  // Saída Interestadual (6xxx)
+  { value: "6101", label: "Venda de produção do estabelecimento (Contribuinte)", hint: "Saída · Interestadual" },
+  { value: "6102", label: "Venda de mercadoria adquirida de terceiros (Contribuinte)", hint: "Saída · Interestadual" },
+  { value: "6107", label: "Venda de produção destinada a não contribuinte", hint: "Saída · Interestadual · Não Contrib." },
+  { value: "6108", label: "Venda de mercadoria adquirida de terceiros destinada a não contribuinte", hint: "Saída · Interestadual · Não Contrib." },
+  { value: "6404", label: "Venda de mercadoria sujeita ao ST (substituído)", hint: "Saída · Interestadual" },
+  // CT-e Saída Interestadual
+  { value: "6352", label: "Prestação de serviço de transporte a estabelecimento industrial", hint: "CT-e · Saída · Interestadual" },
+  { value: "6353", label: "Prestação de serviço de transporte a estabelecimento comercial", hint: "CT-e · Saída · Interestadual" },
+  { value: "6357", label: "Prestação de serviço de transporte a não contribuinte", hint: "CT-e · Saída · Interestadual · Não Contrib." },
 ];
 
 export const CST_CBS_IBS_OPTIONS: ComboboxOption[] = [

@@ -107,6 +107,8 @@ type FiscalRule = {
   cfop_estadual?: string;
   cfop_interestadual?: string;
   cfop_nao_contrib_interestadual?: string;
+  cfop_entrada_estadual?: string;
+  cfop_entrada_interestadual?: string;
   usa_mva?: boolean;
   mva?: string;
   // Substituição Tributária
@@ -135,7 +137,7 @@ const RULE_FIELD_KEYS: (keyof FiscalRule)[] = [
   "ind_ie_dest",
   "csosn", "csosn_nao_contrib", "cst_icms_contrib", "cst_icms_nao_contrib", "origem_mercadoria",
   "mod_bc_icms", "valor_bc_icms", "aliquota_icms", "aliquota_icms_nao_contrib", "valor_icms",
-  "reducao_bc_icms", "reducao_bc_icms_nao_contrib", "cfop_estadual", "cfop_interestadual", "cfop_nao_contrib_interestadual",
+  "reducao_bc_icms", "reducao_bc_icms_nao_contrib", "cfop_estadual", "cfop_interestadual", "cfop_nao_contrib_interestadual", "cfop_entrada_estadual", "cfop_entrada_interestadual",
   "usa_mva", "mva",
   "substituicao_tributaria", "valor_icms_st",
   "usa_difal", "aliquota_icms_interestadual", "aliquota_icms_interna_destino", "aliquota_fcp",
@@ -184,6 +186,7 @@ type NfeData = {
   nfce_csosn?: string;
   nfce_cst?: string;
   nfce_cfop?: string;
+  nfce_cfop_entrada?: string;
   nfce_aliquota_icms?: string;
   nfce_substituicao_tributaria?: boolean;
   nfce_valor_icms_st?: string;
@@ -210,6 +213,8 @@ type NfeData = {
   reducao_bc_icms?: string;
   cfop_estadual?: string;
   cfop_interestadual?: string;
+  cfop_entrada_estadual?: string;
+  cfop_entrada_interestadual?: string;
   usa_mva?: boolean;
   mva?: string;
   substituicao_tributaria?: boolean;
@@ -1379,6 +1384,8 @@ const EXTRACT_RULE_LABELS: Record<string, string> = {
   valor_icms: "Valor ICMS",
   cfop_estadual: "CFOP Estadual",
   cfop_interestadual: "CFOP Interestadual",
+  cfop_entrada_estadual: "CFOP Entrada Estadual",
+  cfop_entrada_interestadual: "CFOP Entrada Interestadual",
   substituicao_tributaria: "ICMS-ST",
   valor_icms_st: "Valor ICMS-ST",
   cst_ipi: "CST IPI",
@@ -2020,26 +2027,44 @@ function RuleCard({
             </>
           )}
 
-          <Field label="CFOP Estadual" {...hintFor("cfop_estadual")}>
+          <Field label="CFOP de Saída Estadual" {...hintFor("cfop_estadual")}>
             <Combobox
-              options={CFOP_OPTIONS.filter((o) => o.hint?.includes("Estadual"))}
+              options={CFOP_OPTIONS.filter((o) => o.value.startsWith("5") && !o.hint?.includes("CT-e"))}
               value={rule.cfop_estadual}
               onChange={(v) => upd("cfop_estadual", v)}
+              placeholder="Ex.: 5102 - Venda de mercadoria"
             />
           </Field>
-          <Field label="CFOP Interestadual (Contribuinte)" {...hintFor("cfop_interestadual")}>
+          <Field label="CFOP de Saída Interestadual (Contribuinte)" {...hintFor("cfop_interestadual")}>
             <Combobox
-              options={CFOP_OPTIONS.filter((o) => o.hint?.includes("Interestadual") && !o.hint?.includes("Não Contrib."))}
+              options={CFOP_OPTIONS.filter((o) => o.value.startsWith("6") && !o.hint?.includes("CT-e") && !o.hint?.includes("Não Contrib."))}
               value={rule.cfop_interestadual}
               onChange={(v) => upd("cfop_interestadual", v)}
+              placeholder="Ex.: 6102 - Venda interestadual"
             />
           </Field>
-          <Field label="CFOP Interestadual (Não Contribuinte — Ex: 6108)" className="md:col-span-2">
+          <Field label="CFOP de Saída Interestadual (Não Contribuinte — Ex: 6108)" className="md:col-span-2">
             <Combobox
               options={CFOP_OPTIONS.filter((o) => o.hint?.includes("Não Contrib."))}
               value={rule.cfop_nao_contrib_interestadual}
               onChange={(v) => upd("cfop_nao_contrib_interestadual", v)}
               placeholder="Ex.: 6108 - Venda a Não Contribuinte"
+            />
+          </Field>
+          <Field label="CFOP de Entrada Estadual (Ex: 1102, 1202, 1403)" {...hintFor("cfop_entrada_estadual")}>
+            <Combobox
+              options={CFOP_OPTIONS.filter((o) => o.value.startsWith("1") && !o.hint?.includes("CT-e"))}
+              value={rule.cfop_entrada_estadual}
+              onChange={(v) => upd("cfop_entrada_estadual", v)}
+              placeholder="Ex.: 1102 - Compra p/ comercialização"
+            />
+          </Field>
+          <Field label="CFOP de Entrada Interestadual (Ex: 2102, 2202, 2403)" {...hintFor("cfop_entrada_interestadual")}>
+            <Combobox
+              options={CFOP_OPTIONS.filter((o) => o.value.startsWith("2") && !o.hint?.includes("CT-e"))}
+              value={rule.cfop_entrada_interestadual}
+              onChange={(v) => upd("cfop_entrada_interestadual", v)}
+              placeholder="Ex.: 2102 - Compra p/ comercialização"
             />
           </Field>
         </div>
@@ -2241,11 +2266,21 @@ function NfceBlock({ form, update }: StepProps) {
             </Field>
           )}
 
-          <Field label="CFOP Padrão NFC-e (Operação Estadual)">
+          <Field label="CFOP Padrão NFC-e (Saída Estadual)">
             <Combobox
-              options={CFOP_OPTIONS.filter((o) => o.hint === "Estadual")}
+              options={CFOP_OPTIONS.filter((o) => o.value.startsWith("5") && !o.hint?.includes("CT-e"))}
               value={form.nfce_cfop}
               onChange={(v) => update("nfce_cfop", v)}
+              placeholder="Ex.: 5102, 5405..."
+            />
+          </Field>
+
+          <Field label="CFOP de Entrada / Devolução NFC-e">
+            <Combobox
+              options={CFOP_OPTIONS.filter((o) => o.value.startsWith("1") && !o.hint?.includes("CT-e"))}
+              value={form.nfce_cfop_entrada}
+              onChange={(v) => update("nfce_cfop_entrada", v)}
+              placeholder="Ex.: 1202 - Devolução de venda, 1102..."
             />
           </Field>
 
@@ -2529,9 +2564,11 @@ function ReviewSummary({ form, empresa, showNfce, hideEmpresa }: { form: NfeData
       { label: "Valor ICMS", value: rule.valor_icms },
       { label: "Redução BC ICMS (Contribuinte)", value: rule.reducao_bc_icms && `${rule.reducao_bc_icms}%` },
       { label: "Redução BC ICMS (Não Contribuinte)", value: rule.reducao_bc_icms_nao_contrib && `${rule.reducao_bc_icms_nao_contrib}%` },
-      { label: "CFOP Estadual", value: rule.cfop_estadual },
+      { label: "CFOP Estadual (Saída)", value: rule.cfop_estadual },
       { label: "CFOP Interestadual (Contribuinte)", value: rule.cfop_interestadual },
       { label: "CFOP Interestadual (Não Contribuinte)", value: rule.cfop_nao_contrib_interestadual },
+      { label: "CFOP Entrada Estadual", value: rule.cfop_entrada_estadual },
+      { label: "CFOP Entrada Interestadual", value: rule.cfop_entrada_interestadual },
       { label: "DIFAL (Partilha ICMS Não Contrib.)", value: rule.usa_difal ? `Sim · Inter ${rule.aliquota_icms_interestadual ?? "0"}% · Destino ${rule.aliquota_icms_interna_destino ?? "0"}% · FCP ${rule.aliquota_fcp ?? "0"}%` : undefined },
       { label: "MVA", value: rule.usa_mva ? (rule.mva ? `${rule.mva}%` : "Sim") : undefined },
       { label: "Substituição Tributária", value: rule.substituicao_tributaria ? (rule.valor_icms_st ? `Sim · ${rule.valor_icms_st}` : "Sim") : undefined },
@@ -2573,7 +2610,8 @@ function ReviewSummary({ form, empresa, showNfce, hideEmpresa }: { form: NfeData
         { label: "Série NFC-e", value: form.nfce_serie },
         { label: "CSOSN NFC-e", value: form.nfce_csosn },
         { label: "CST ICMS NFC-e", value: form.nfce_cst },
-        { label: "CFOP Padrão NFC-e", value: form.nfce_cfop },
+        { label: "CFOP Padrão NFC-e (Saída)", value: form.nfce_cfop },
+        { label: "CFOP de Entrada / Devolução NFC-e", value: form.nfce_cfop_entrada },
         { label: "Alíquota ICMS NFC-e", value: form.nfce_aliquota_icms && `${form.nfce_aliquota_icms}%` },
         { label: "ICMS-ST NFC-e", value: form.nfce_substituicao_tributaria ? (form.nfce_valor_icms_st ? `Sim · ${form.nfce_valor_icms_st}` : "Sim") : undefined },
         { label: "CST CBS/IBS NFC-e", value: form.nfce_cst_cbs_ibs },

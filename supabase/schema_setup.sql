@@ -54,11 +54,6 @@ CREATE POLICY "Allow all access to user_roles"
   USING (true)
   WITH CHECK (true);
 
--- Inserir permissão padrão para o admin
-INSERT INTO public.user_roles (user_id, role)
-VALUES ('admin-local-dev', 'admin')
-ON CONFLICT (user_id, role) DO NOTHING;
-
 -- 3. Bucket de storage para upload de certificados digitais (.pfx / .p12)
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('certificados', 'certificados', false)

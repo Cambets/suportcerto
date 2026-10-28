@@ -89,6 +89,12 @@ function primaryFromTypes(types: readonly (typeof ALL_TYPES)[number][]) {
   return types.includes("mdfe") && !types.includes("nfe") ? "mdfe" : (types[0] ?? "nfe");
 }
 
+function toValidUuidOrNull(val?: string | null): string | null {
+  if (!val) return null;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+  return isUuid ? val : null;
+}
+
 function genToken() {
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
@@ -129,7 +135,7 @@ export const createParameterization = createServerFn({ method: "POST" })
       step_current: 0,
       public_token: token,
       token_expires_at: tokenExpiryFromNow(),
-      created_by: userId,
+      created_by: toValidUuidOrNull(userId),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -142,9 +148,13 @@ export const createParameterization = createServerFn({ method: "POST" })
           .insert(newRecord as any)
           .select("id, public_token, client_name, form_type, form_types")
           .single();
-        if (!error && row) return row;
-      } catch {
-        // fallback local
+        if (error) {
+          console.error("[createParameterization] Supabase insert error:", error);
+        } else if (row) {
+          return row;
+        }
+      } catch (e) {
+        console.error("[createParameterization] Supabase exception:", e);
       }
     }
 
@@ -246,7 +256,20 @@ export const duplicateParameterization = createServerFn({ method: "POST" })
     const userId = context?.userId || "admin-local-dev";
     await assertAdmin(userId);
     const localStore = getLocalStore();
-    const src = localStore.find((r) => r.id === data.id);
+    let src = localStore.find((r) => r.id === data.id);
+
+    if (!src && isSupabaseAdminConfigured()) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: dbSrc } = await supabaseAdmin
+          .from("system_parameterizations")
+          .select("*")
+          .eq("id", data.id)
+          .maybeSingle();
+        if (dbSrc) src = dbSrc;
+      } catch {}
+    }
+
     const newRecord = {
       id: crypto.randomUUID(),
       client_name: src ? `${src.client_name} (cópia)` : "Novo Cliente (cópia)",
@@ -257,7 +280,7 @@ export const duplicateParameterization = createServerFn({ method: "POST" })
       step_current: 0,
       public_token: genToken(),
       token_expires_at: tokenExpiryFromNow(),
-      created_by: userId,
+      created_by: toValidUuidOrNull(userId),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

@@ -8,7 +8,7 @@ export function isSupabaseConfigured(): boolean {
     process.env.VITE_SUPABASE_URL || 
     process.env.SUPABASE_URL || '';
   
-  if (!url || url.includes('seu-projeto') || url.includes('tmbukbepahzrzujnfyhm')) {
+  if (!url || url.includes('seu-projeto') || url.includes('placeholder')) {
     return false;
   }
   return true;

@@ -4,7 +4,7 @@ import type { Database } from './types';
 
 export function isSupabaseAdminConfigured(): boolean {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-  if (!url || url.includes('seu-projeto') || url.includes('tmbukbepahzrzujnfyhm')) {
+  if (!url || url.includes('seu-projeto') || url.includes('placeholder')) {
     return false;
   }
   return true;

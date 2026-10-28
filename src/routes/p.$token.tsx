@@ -387,7 +387,17 @@ function PublicForm() {
         const fd = (row.form_data ?? {}) as StoredFormData;
 
         // Carrega novo formato
-        let mods = (fd.modules_selected ?? []) as ModuleKey[];
+        let rawMods = (fd as any)?.modules_selected;
+        let mods: ModuleKey[] = [];
+        if (Array.isArray(rawMods)) {
+          mods = rawMods.filter(Boolean) as ModuleKey[];
+        } else if (rawMods && typeof rawMods === "object") {
+          mods = Object.keys(rawMods).filter((k) => (rawMods as any)[k]) as ModuleKey[];
+        } else if (Array.isArray((row as any).form_types) && (row as any).form_types.length > 0) {
+          mods = [...(row as any).form_types] as ModuleKey[];
+        } else if ((row as any).form_type) {
+          mods = [(row as any).form_type as ModuleKey];
+        }
         const modulos = fd.modulos ?? {};
         let nfe: NfeData = (modulos.nfe ?? fd.nfe_data ?? {}) as NfeData;
         let mdfe: MdfeData = (modulos.mdfe ?? fd.mdfe_data ?? {}) as MdfeData;
@@ -510,21 +520,23 @@ function PublicForm() {
 
   function toggleModule(key: ModuleKey) {
     setModulesSelected((prev) => {
-      const willRemove = prev.includes(key);
+      const arr = Array.isArray(prev) ? prev : [];
+      const willRemove = arr.includes(key);
       if (willRemove && key === "boleto") {
         // Limpa dados residuais do módulo opcional ao desmarcar
         setBoletoData({});
       }
-      return willRemove ? prev.filter((m) => m !== key) : [...prev, key];
+      return willRemove ? arr.filter((m) => m !== key) : [...arr, key];
     });
   }
 
 
   function pickInitialModule(mods: ModuleKey[]): "nfe" | "mdfe" | "nfse" | "cte" | "boleto" {
-    if (mods.includes("nfe") || mods.includes("nfce")) return "nfe";
-    if (mods.includes("mdfe")) return "mdfe";
-    if (mods.includes("nfse")) return "nfse";
-    if (mods.includes("cte")) return "cte";
+    const arr = Array.isArray(mods) ? mods : [];
+    if (arr.includes("nfe") || arr.includes("nfce")) return "nfe";
+    if (arr.includes("mdfe")) return "mdfe";
+    if (arr.includes("nfse")) return "nfse";
+    if (arr.includes("cte")) return "cte";
     return "boleto";
   }
 
@@ -798,8 +810,9 @@ function PublicForm() {
     );
   }
   if (done) {
-    const showNfce = modulesSelected.includes("nfce");
-    const showNfe = modulesSelected.includes("nfe") || showNfce;
+    const safeModules = Array.isArray(modulesSelected) ? modulesSelected : [];
+    const showNfce = safeModules.includes("nfce");
+    const showNfe = safeModules.includes("nfe") || showNfce;
     const moduleLabels: Record<ModuleKey, string> = {
       nfe: "NF-e",
       nfce: "NFC-e",
@@ -836,9 +849,9 @@ function PublicForm() {
               <p className="text-xs text-muted-foreground mt-1">
                 Enviado em {(submittedAt ?? new Date()).toLocaleString("pt-BR")}
               </p>
-              {modulesSelected.length > 0 && (
+              {safeModules.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-3">
-                  {modulesSelected.map((m) => (
+                  {safeModules.map((m) => (
                     <span key={m} className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-muted">
                       {moduleLabels[m]}
                     </span>
@@ -849,9 +862,9 @@ function PublicForm() {
 
             <EmpresaGlobalSummary empresa={empresa} />
             {showNfe && <ReviewSummary form={nfeData} empresa={empresa} showNfce={showNfce} hideEmpresa />}
-            {modulesSelected.includes("mdfe") && <ModuleKeyValues title="MDF-e" data={mdfeData} />}
-            {modulesSelected.includes("nfse") && <ModuleKeyValues title="NFS-e" data={nfseData} />}
-            {modulesSelected.includes("cte") && <ModuleKeyValues title="CT-e" data={cteData} />}
+            {safeModules.includes("mdfe") && <ModuleKeyValues title="MDF-e" data={mdfeData} />}
+            {safeModules.includes("nfse") && <ModuleKeyValues title="NFS-e" data={nfseData} />}
+            {safeModules.includes("cte") && <ModuleKeyValues title="CT-e" data={cteData} />}
             {(nfeData.observacoes || (mdfeData as any)?.observacoes || (nfseData as any)?.observacoes || (cteData as any)?.observacoes) && (
               <div className="border rounded-xl p-4 md:p-5 bg-muted/20">
                 <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
@@ -873,6 +886,7 @@ function PublicForm() {
 
   // Passo Zero — Seleção de Módulos
   if (stage === "select") {
+    const safeModules = Array.isArray(modulesSelected) ? modulesSelected : [];
     return (
       <div className="min-h-screen bg-muted/20">
         <div className="max-w-4xl mx-auto px-4 py-6 md:py-10">
@@ -894,7 +908,7 @@ function PublicForm() {
             <div className="grid gap-3 md:grid-cols-3">
               {MODULES.map((m) => {
                 const Icon = m.icon;
-                const checked = modulesSelected.includes(m.key);
+                const checked = safeModules.includes(m.key);
                 return (
                   <button
                     key={m.key}
@@ -937,7 +951,7 @@ function PublicForm() {
             <div className="mt-8 flex justify-end">
               <Button
                 size="lg"
-                disabled={modulesSelected.length === 0}
+                disabled={safeModules.length === 0}
                 onClick={goToGlobal}
                 className="gap-2"
               >
@@ -984,12 +998,13 @@ function PublicForm() {
 
 
   // Wizard com super-abas dinâmicas
-  const showNfe = modulesSelected.includes("nfe") || modulesSelected.includes("nfce");
-  const showMdfe = modulesSelected.includes("mdfe");
-  const showNfce = modulesSelected.includes("nfce");
-  const showNfse = modulesSelected.includes("nfse");
-  const showCte = modulesSelected.includes("cte");
-  const showBoleto = modulesSelected.includes("boleto");
+  const safeModules = Array.isArray(modulesSelected) ? modulesSelected : [];
+  const showNfe = safeModules.includes("nfe") || safeModules.includes("nfce");
+  const showMdfe = safeModules.includes("mdfe");
+  const showNfce = safeModules.includes("nfce");
+  const showNfse = safeModules.includes("nfse");
+  const showCte = safeModules.includes("cte");
+  const showBoleto = safeModules.includes("boleto");
   const superTabs: { key: "nfe" | "mdfe" | "nfse" | "cte" | "boleto"; label: string }[] = [];
   if (showNfe) superTabs.push({ key: "nfe", label: showNfce ? "NF-e / NFC-e" : "NF-e" });
   if (showMdfe) superTabs.push({ key: "mdfe", label: "MDF-e" });
@@ -1778,7 +1793,7 @@ function ReformaTributariaNfeTab({ form, update }: StepProps) {
 
                 <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
                   {CREDITO_PRESUMIDO_LC214_OPTIONS.map((opt) => {
-                    const current = form.credito_presumido_cbs_ibs ?? [];
+                    const current = Array.isArray(form.credito_presumido_cbs_ibs) ? form.credito_presumido_cbs_ibs : [];
                     const isChecked = current.includes(opt.id);
                     return (
                       <div

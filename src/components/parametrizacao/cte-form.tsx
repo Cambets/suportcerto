@@ -369,7 +369,7 @@ export function CteForm({ form, update, onFinish, showFinishButton = true, hideE
 
                     <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
                       {CREDITO_PRESUMIDO_LC214_OPTIONS.map((opt) => {
-                        const current = form.credito_presumido_cbs_ibs ?? [];
+                        const current = Array.isArray(form.credito_presumido_cbs_ibs) ? form.credito_presumido_cbs_ibs : [];
                         const isChecked = current.includes(opt.id);
                         return (
                           <div

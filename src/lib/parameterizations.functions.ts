@@ -121,9 +121,10 @@ export const createParameterization = createServerFn({ method: "POST" })
     await assertAdmin(userId);
     const primary = primaryFromTypes(data.form_types);
     const token = genToken();
-    const modules_selected: Record<string, boolean> = {};
-    for (const t of data.form_types) modules_selected[t] = true;
-    if (data.include_boleto) modules_selected.boleto = true;
+    const modules_selected: string[] = [...data.form_types];
+    if (data.include_boleto && !modules_selected.includes("boleto")) {
+      modules_selected.push("boleto");
+    }
 
     const newRecord = {
       id: crypto.randomUUID(),

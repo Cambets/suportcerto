@@ -199,7 +199,8 @@ function ParametrizacaoPage() {
     return rows.filter((r) => {
       if (filterStatus !== "all" && r.status !== filterStatus) return false;
       if (filterType !== "all") {
-        const types = (r.form_types && r.form_types.length > 0 ? r.form_types : [r.form_type]) as FormType[];
+        const rawTypes = Array.isArray(r.form_types) && r.form_types.length > 0 ? r.form_types : [r.form_type];
+        const types = Array.isArray(rawTypes) ? rawTypes : [];
         if (!types.includes(filterType)) return false;
       }
       if (q && !r.client_name.toLowerCase().includes(q)) return false;
@@ -1041,9 +1042,15 @@ function FormDataViewer({ data, formTypes, clientName }: { data: FormData; formT
   const hasSignature = !!(signature && (signature.signer_name || signature.signer_cpf || signature.signed_at));
 
   // Detect which modules have data (or are at least selected in form_types)
-  const selected = (formTypes && formTypes.length > 0
+  const rawModsSel = data?.modules_selected;
+  const modsSelArray = Array.isArray(rawModsSel)
+    ? rawModsSel
+    : rawModsSel && typeof rawModsSel === "object"
+    ? Object.keys(rawModsSel).filter((k) => (rawModsSel as any)[k])
+    : [];
+  const selected = (Array.isArray(formTypes) && formTypes.length > 0
     ? formTypes
-    : (data?.modules_selected as FormType[]) ?? []) as string[];
+    : modsSelArray) as string[];
 
   const moduleKeys = Array.from(
     new Set([

@@ -234,7 +234,18 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
     }
 
     if (validImages.length > 0) {
-      setAttachments((prev) => [...prev, ...validImages].slice(0, 5));
+      setAttachments((prev) => {
+        const next = [...prev];
+        for (const img of validImages) {
+          const alreadyExists = next.some(
+            (existing) => existing.size === img.size && (existing.name === img.name || existing.lastModified === img.lastModified)
+          );
+          if (!alreadyExists) {
+            next.push(img);
+          }
+        }
+        return next.slice(0, 5);
+      });
       toast.success(
         validImages.length === 1
           ? "Imagem adicionada com sucesso!"
@@ -243,63 +254,106 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
     }
 
     if (validAudios.length > 0) {
-      setAttachments((prev) => [...prev, ...validAudios].slice(0, 5));
+      setAttachments((prev) => {
+        const next = [...prev];
+        for (const aud of validAudios) {
+          const alreadyExists = next.some(
+            (existing) => existing.size === aud.size && existing.name === aud.name
+          );
+          if (!alreadyExists) {
+            next.push(aud);
+          }
+        }
+        return next.slice(0, 5);
+      });
       validAudios.forEach((audioFile) => {
         transcribeAudioFile(audioFile);
       });
     }
   }, [textInput]);
 
+  const lastPasteTimeRef = useRef<number>(0);
+
   const handlePasteEvent = useCallback((e: React.ClipboardEvent | ClipboardEvent) => {
     const clipboardData =
       (e as React.ClipboardEvent).clipboardData || (e as ClipboardEvent).clipboardData;
     if (!clipboardData) return;
 
-    const filesFromList = Array.from(clipboardData.files || []);
-    const filesFromItems: File[] = [];
+    // Extrai arquivos diretamente sem duplicar (prioriza items para nomear prints, fallback para files)
+    const extractedFiles: File[] = [];
 
-    if (clipboardData.items) {
+    if (clipboardData.items && clipboardData.items.length > 0) {
       for (let i = 0; i < clipboardData.items.length; i++) {
         const item = clipboardData.items[i];
         if (item.kind === "file") {
           const file = item.getAsFile();
           if (file) {
-            if (!file.name || file.name === "image.png") {
-              const namedFile = new File([file], `print-${Date.now()}.png`, {
-                type: file.type || "image/png",
-              });
-              filesFromItems.push(namedFile);
-            } else {
-              filesFromItems.push(file);
+            const isImg = isImageFile(file);
+            const isAud = isAudioFile(file);
+            if (isImg || isAud) {
+              const isGeneric = !file.name || file.name === "image.png";
+              const namedFile = isGeneric
+                ? new File([file], `print-${Date.now()}${i > 0 ? `-${i + 1}` : ""}.png`, {
+                    type: file.type || "image/png",
+                  })
+                : file;
+              extractedFiles.push(namedFile);
             }
           }
         }
       }
+    } else if (clipboardData.files && clipboardData.files.length > 0) {
+      for (let i = 0; i < clipboardData.files.length; i++) {
+        const file = clipboardData.files[i];
+        if (isImageFile(file) || isAudioFile(file)) {
+          const isGeneric = !file.name || file.name === "image.png";
+          const namedFile = isGeneric
+            ? new File([file], `print-${Date.now()}${i > 0 ? `-${i + 1}` : ""}.png`, {
+                type: file.type || "image/png",
+              })
+            : file;
+          extractedFiles.push(namedFile);
+        }
+      }
     }
 
-    const allFiles = [...filesFromList, ...filesFromItems].filter(
-      (f, idx, arr) =>
-        arr.findIndex((other) => other.name === f.name && other.size === f.size) === idx
-    );
-
-    const validFiles = allFiles.filter((f) => isImageFile(f) || isAudioFile(f));
-    if (validFiles.length > 0) {
+    if (extractedFiles.length > 0) {
       e.preventDefault();
-      addFiles(validFiles);
+      if ("stopPropagation" in e && typeof e.stopPropagation === "function") {
+        e.stopPropagation();
+      }
+
+      // Trava contra disparos duplicados de eventos de paste ocorrendo em < 300ms
+      const now = Date.now();
+      if (now - lastPasteTimeRef.current < 300) {
+        return;
+      }
+      lastPasteTimeRef.current = now;
+
+      addFiles(extractedFiles);
     }
   }, [addFiles]);
 
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
+      // Se já foi processado pelo input/textarea, não processa novamente
+      if (e.defaultPrevented) return;
+
       const items = e.clipboardData?.items;
-      if (!items) return;
+      const files = e.clipboardData?.files;
       let hasFile = false;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].kind === "file") {
-          hasFile = true;
-          break;
+
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].kind === "file") {
+            hasFile = true;
+            break;
+          }
         }
+      } else if (files && files.length > 0) {
+        hasFile = true;
       }
+
       if (hasFile) {
         handlePasteEvent(e);
       }
@@ -347,7 +401,6 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
   return (
     <div
       className="flex flex-col h-full relative"
-      onPaste={handlePasteEvent}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes("Files")) {
           e.preventDefault();

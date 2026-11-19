@@ -64,6 +64,7 @@ export type NfseData = {
   aprox_tributos_municipal?: string;
 
   // Aba 4 — Enquadramento
+  natureza_operacao_nfse?: string;
   tipo_tributacao?: string;
   exigibilidade_iss?: string;
   natureza_tributacao_rps?: string;
@@ -199,6 +200,15 @@ const COD_ITEM_LISTA_OPTIONS: ComboboxOption[] = [
   { value: "1.05", label: "Licenciamento de software" },
   { value: "7.01", label: "Engenharia" },
   { value: "17.19", label: "Contabilidade" },
+];
+
+const NATUREZA_OPERACAO_NFSE_OPTIONS = [
+  { v: "1", t: "1 — Tributação no município" },
+  { v: "2", t: "2 — Tributação fora do município" },
+  { v: "3", t: "3 — Isenção" },
+  { v: "4", t: "4 — Imune" },
+  { v: "5", t: "5 — Exigibilidade suspensa por decisão judicial" },
+  { v: "6", t: "6 — Exigibilidade suspensa por procedimento administrativo" },
 ];
 
 const TIPO_TRIBUTACAO_OPTIONS = [
@@ -476,10 +486,10 @@ export function NfseForm({ form, update, onFinish, hideFinishButton, hideEmpresa
 
             <Section title="Credenciais da Prefeitura">
               <div className="grid gap-4 md:grid-cols-2 min-w-0 w-full">
-                <Field label="Login Acesso à Prefeitura">
+                <Field label="Login Acesso à Prefeitura" required>
                   <Input value={form.prefeitura_login ?? ""} onChange={(e) => update("prefeitura_login", e.target.value)} placeholder="Usuário do portal" />
                 </Field>
-                <Field label="Senha Acesso à Prefeitura">
+                <Field label="Senha Acesso à Prefeitura" required>
                   <Input type="password" value={form.prefeitura_senha ?? ""} onChange={(e) => update("prefeitura_senha", e.target.value)} placeholder="••••••••" />
                 </Field>
               </div>
@@ -665,7 +675,7 @@ export function NfseForm({ form, update, onFinish, hideFinishButton, hideEmpresa
                     placeholder="Selecione ou digite o código municipal..."
                   />
                 </Field>
-                <Field label="Código Indicador da Operação de Fornecimento *">
+                <Field label="Indicador da Operação de Fornecimento" required>
                   <Input
                     value={form.codigo_indicador_operacao_fornecimento ?? ""}
                     onChange={(e) => update("codigo_indicador_operacao_fornecimento", e.target.value)}
@@ -682,10 +692,10 @@ export function NfseForm({ form, update, onFinish, hideFinishButton, hideEmpresa
           {hideEmpresa && (
             <Section title="Credenciais da Prefeitura">
               <div className="grid gap-4 md:grid-cols-2 min-w-0 w-full">
-                <Field label="Login Acesso à Prefeitura">
+                <Field label="Login Acesso à Prefeitura" required>
                   <Input value={form.prefeitura_login ?? ""} onChange={(e) => update("prefeitura_login", e.target.value)} placeholder="Usuário do portal" />
                 </Field>
-                <Field label="Senha Acesso à Prefeitura">
+                <Field label="Senha Acesso à Prefeitura" required>
                   <Input type="password" value={form.prefeitura_senha ?? ""} onChange={(e) => update("prefeitura_senha", e.target.value)} placeholder="••••••••" />
                 </Field>
               </div>
@@ -693,10 +703,10 @@ export function NfseForm({ form, update, onFinish, hideFinishButton, hideEmpresa
           )}
           <Section title="RPS (Recibo Provisório de Serviços)">
             <div className="grid gap-4 md:grid-cols-2 min-w-0 w-full">
-              <Field label="Último RPS emitido">
+              <Field label="Última NFSe Nacional (RPS) Emitida" required>
                 <Input inputMode="numeric" value={form.ultimo_rps ?? ""} onChange={(e) => update("ultimo_rps", e.target.value.replace(/\D/g, ""))} placeholder="0" />
               </Field>
-              <Field label="Série do último RPS">
+              <Field label="Série NFSe Nacional (RPS)" required>
                 <Input value={form.serie_rps ?? ""} onChange={(e) => update("serie_rps", e.target.value)} placeholder="1" />
               </Field>
             </div>
@@ -708,19 +718,19 @@ export function NfseForm({ form, update, onFinish, hideFinishButton, hideEmpresa
               “Usar &lt;código&gt;” — qualquer código válido pode ser informado manualmente.
             </p>
             <div className="grid gap-4 md:grid-cols-2 min-w-0 w-full">
-              <Field label="Código NBS">
+              <Field label="Código NBS (Somente números)" required>
                 <Combobox options={NBS_OPTIONS} value={form.codigo_nbs} onChange={(v) => update("codigo_nbs", v)} />
               </Field>
-              <Field label="Código CNAE">
+              <Field label="Código CNAE" required>
                 <Combobox options={CNAE_OPTIONS} value={form.codigo_cnae} onChange={(v) => update("codigo_cnae", v)} />
               </Field>
-              <Field label="Código do Item da Lista de Serviço">
+              <Field label="Código do Item da Lista de Serviço" required>
                 <Combobox options={COD_ITEM_LISTA_OPTIONS} value={form.codigo_item_lista_servico} onChange={(v) => update("codigo_item_lista_servico", v)} />
               </Field>
               <Field label="Município de Prestação">
                 <Input value={form.municipio_prestacao ?? ""} onChange={(e) => update("municipio_prestacao", e.target.value)} placeholder="Ex.: São Paulo - SP" />
               </Field>
-              <Field label="Código Contribuinte">
+              <Field label="Código Contribuinte / Serviço Nacional" required>
                 <Input value={form.codigo_contribuinte ?? ""} onChange={(e) => update("codigo_contribuinte", e.target.value)} placeholder="Código municipal do contribuinte" />
               </Field>
               <Field label="Código do Item (Livre — 6 dígitos)">
@@ -776,9 +786,9 @@ export function NfseForm({ form, update, onFinish, hideFinishButton, hideEmpresa
               Percentuais aproximados informados no rodapé da NFS-e para atendimento à Lei nº 12.741/2012.
             </p>
             <div className="grid gap-4 md:grid-cols-3 min-w-0 w-full">
-              <PercentField label="Tributos Nacional" value={form.aprox_tributos_nacional} onChange={(v) => update("aprox_tributos_nacional", v)} />
-              <PercentField label="Tributos Estadual" value={form.aprox_tributos_estadual} onChange={(v) => update("aprox_tributos_estadual", v)} />
-              <PercentField label="Tributos Municipal" value={form.aprox_tributos_municipal} onChange={(v) => update("aprox_tributos_municipal", v)} />
+              <PercentField label="Alíquota Valor Aprox. Tributos Nacional" required value={form.aprox_tributos_nacional} onChange={(v) => update("aprox_tributos_nacional", v)} />
+              <PercentField label="Alíquota Valor Aprox. Tributos Estadual" required value={form.aprox_tributos_estadual} onChange={(v) => update("aprox_tributos_estadual", v)} />
+              <PercentField label="Alíquota Valor Aprox. Tributos Municipal" required value={form.aprox_tributos_municipal} onChange={(v) => update("aprox_tributos_municipal", v)} />
             </div>
           </Section>
         </TabsContent>
@@ -821,23 +831,26 @@ export function NfseForm({ form, update, onFinish, hideFinishButton, hideEmpresa
               Configure as regras municipais do ISS e o regime adotado perante a prefeitura.
             </p>
             <div className="grid gap-4 md:grid-cols-2 min-w-0 w-full">
-              <Field label="Tipo de Tributação">
+              <Field label="Natureza da Operação NFSe" required>
+                <SelectField options={NATUREZA_OPERACAO_NFSE_OPTIONS} value={form.natureza_operacao_nfse} onChange={(v) => update("natureza_operacao_nfse", v)} />
+              </Field>
+              <Field label="Tipo Tributação" required>
                 <SelectField options={TIPO_TRIBUTACAO_OPTIONS} value={form.tipo_tributacao} onChange={(v) => update("tipo_tributacao", v)} />
               </Field>
-              <Field label="Exigibilidade do ISS">
+              <Field label="Exigibilidade ISS" required>
                 <SelectField options={EXIGIBILIDADE_ISS_OPTIONS} value={form.exigibilidade_iss} onChange={(v) => update("exigibilidade_iss", v)} />
               </Field>
-              <Field label="Regime Especial de Tributação (RPS)">
+              <Field label="Regime Especial Tributação RPS" required>
                 <SelectField options={REGIME_ESPECIAL_OPTIONS} value={form.regime_especial_rps} onChange={(v) => update("regime_especial_rps", v)} />
               </Field>
-              <Field label="Natureza da Tributação (RPS)">
+              <Field label="Natureza Tributação RPS" required>
                 <SelectField options={NATUREZA_RPS_OPTIONS} value={form.natureza_tributacao_rps} onChange={(v) => update("natureza_tributacao_rps", v)} />
               </Field>
             </div>
           </Section>
 
           <Section title="Situação Tributária do ISS">
-            <Field label="CST / Situação Tributária Municipal" className="w-full min-w-0">
+            <Field label="Situação Tributária" required className="w-full min-w-0">
               <SelectField options={SITUACAO_TRIBUTARIA_OPTIONS} value={form.situacao_tributaria} onChange={(v) => update("situacao_tributaria", v)} />
             </Field>
           </Section>
@@ -882,12 +895,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function Field({ label, children, className, required }: { label: string; children: React.ReactNode; className?: string; required?: boolean }) {
   return (
     <div className={cn("space-y-1.5 min-w-0 w-full", className)}>
       {label && (
         <Label className="text-xs uppercase tracking-wide text-muted-foreground block break-words whitespace-normal leading-normal">
-          {label}
+          {label} {required && <span className="text-destructive font-bold">*</span>}
         </Label>
       )}
       {children}
@@ -895,9 +908,9 @@ function Field({ label, children, className }: { label: string; children: React.
   );
 }
 
-function PercentField({ label, value, onChange }: { label: string; value?: string; onChange: (v: string) => void }) {
+function PercentField({ label, value, onChange, required }: { label: string; value?: string; onChange: (v: string) => void; required?: boolean }) {
   return (
-    <Field label={label} className="min-w-0 w-full">
+    <Field label={label} required={required} className="min-w-0 w-full">
       <div className="relative min-w-0 w-full">
         <Input
           inputMode="decimal"

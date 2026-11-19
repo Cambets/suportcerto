@@ -20,10 +20,10 @@ export const checkIsAdmin = createServerFn({ method: "GET" })
         .from("user_roles")
         .select("role")
         .eq("user_id", userId);
-      const roles = (data || []).map((r: any) => r.role);
+      const roles = Array.isArray(data) ? data.map((r: any) => r.role) : [];
       
-      let isAdmin = roles.includes("admin");
-      let isSuporte = roles.includes("suporte");
+      let isAdmin = Array.isArray(roles) && roles.includes("admin");
+      let isSuporte = Array.isArray(roles) && roles.includes("suporte");
 
       if (!isAdmin && !isSuporte) {
         isAdmin = true;

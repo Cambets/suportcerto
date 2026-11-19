@@ -203,7 +203,7 @@ function ParametrizacaoPage() {
         const types = Array.isArray(rawTypes) ? rawTypes : [];
         if (!types.includes(filterType)) return false;
       }
-      if (q && !r.client_name.toLowerCase().includes(q)) return false;
+      if (q && !(r.client_name ?? "").toLowerCase().includes(q)) return false;
       return true;
     });
   }, [rows, search, filterType, filterStatus]);
@@ -582,15 +582,17 @@ function ParametrizacaoPage() {
                     { v: "nfse", t: "NFS-e", d: "Nota Fiscal de Serviço" },
                   ] as const
                 ).map((o) => {
-                  const selected = newTypes.includes(o.v);
+                  const safeNewTypes = Array.isArray(newTypes) ? newTypes : [];
+                  const selected = safeNewTypes.includes(o.v);
                   return (
                     <button
                       key={o.v}
                       type="button"
                       onClick={() =>
-                        setNewTypes((prev) =>
-                          prev.includes(o.v) ? prev.filter((t) => t !== o.v) : [...prev, o.v],
-                        )
+                        setNewTypes((prev) => {
+                          const arr = Array.isArray(prev) ? prev : [];
+                          return arr.includes(o.v) ? arr.filter((t) => t !== o.v) : [...arr, o.v];
+                        })
                       }
                       className={`relative text-left rounded-lg border-2 p-3 transition ${
                         selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
@@ -720,7 +722,8 @@ function EmptyHint({ label }: { label: string }) {
 }
 
 function TypeBadges({ row }: { row: Row }) {
-  const types = (row.form_types && row.form_types.length > 0 ? row.form_types : [row.form_type]) as FormType[];
+  const rawTypes = Array.isArray(row.form_types) && row.form_types.length > 0 ? row.form_types : [row.form_type];
+  const types = (Array.isArray(rawTypes) ? rawTypes : [rawTypes]).filter(Boolean) as FormType[];
   return (
     <div className="flex flex-wrap gap-1">
       {types.map((t) => (
@@ -1836,8 +1839,10 @@ function EditParameterizationDialog({
 
   useEffect(() => {
     if (!row) return;
-    setName(row.client_name);
-    setTypes((row.form_types && row.form_types.length > 0 ? row.form_types : [row.form_type]) as FormType[]);
+    setName(row.client_name ?? "");
+    const rawTypes = Array.isArray(row.form_types) && row.form_types.length > 0 ? row.form_types : [row.form_type];
+    const initialTypes = (Array.isArray(rawTypes) ? rawTypes : [rawTypes]).filter(Boolean) as FormType[];
+    setTypes(initialTypes);
     setStatus((row.status as any) ?? "pendente");
     try {
       setJsonText(JSON.stringify(row.form_data ?? {}, null, 2));
@@ -1848,7 +1853,10 @@ function EditParameterizationDialog({
   }, [row]);
 
   function toggle(t: FormType) {
-    setTypes((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
+    setTypes((p) => {
+      const arr = Array.isArray(p) ? p : [];
+      return arr.includes(t) ? arr.filter((x) => x !== t) : [...arr, t];
+    });
   }
 
   async function save() {
@@ -1900,7 +1908,8 @@ function EditParameterizationDialog({
             <Label>Módulos</Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {(Object.keys(TYPE_LABELS) as FormType[]).map((t) => {
-                const selected = types.includes(t);
+                const safeTypes = Array.isArray(types) ? types : [];
+                const selected = safeTypes.includes(t);
                 return (
                   <button
                     key={t}

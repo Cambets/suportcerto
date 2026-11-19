@@ -181,12 +181,16 @@ type NfeData = {
   nfce_csc_id?: string;
   nfce_csc_codigo?: string;
   nfce_csc_ambiente?: "producao" | "homologacao";
+  nfce_natureza_operacao?: string;
+  nfce_natureza_operacao_devolucao?: string;
   nfce_ultima_nfe?: string;
   nfce_serie?: string;
   nfce_csosn?: string;
   nfce_cst?: string;
   nfce_cfop?: string;
   nfce_cfop_entrada?: string;
+  nfce_cst_pis?: string;
+  nfce_cst_cofins?: string;
   nfce_aliquota_icms?: string;
   nfce_substituicao_tributaria?: boolean;
   nfce_valor_icms_st?: string;
@@ -542,13 +546,14 @@ function PublicForm() {
 
   function goToGlobal() {
     setStage("global");
-    save({ modules: modulesSelected, status: "em_andamento" });
+    save({ modules: Array.isArray(modulesSelected) ? modulesSelected : [], status: "em_andamento" });
   }
 
   function startWizard() {
     setStage("wizard");
-    setActiveModule(pickInitialModule(modulesSelected));
-    save({ modules: modulesSelected, status: "em_andamento" });
+    const safe = Array.isArray(modulesSelected) ? modulesSelected : [];
+    setActiveModule(pickInitialModule(safe));
+    save({ modules: safe, status: "em_andamento" });
   }
 
   function backToSelect() {
@@ -647,6 +652,234 @@ function PublicForm() {
   }
 
   async function finish() {
+    const safeMods = Array.isArray(modulesSelected) ? modulesSelected : [];
+
+    // ===== Validações de Campos Obrigatórios por Módulo =====
+    if (safeMods.includes("nfe")) {
+      if (!nfeData.ultima_nfe?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("cadastrais");
+        toast.error("NF-e: Preencha o 'Número da última NF-e emitida'");
+        return;
+      }
+      if (!nfeData.serie_nfe?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("cadastrais");
+        toast.error("NF-e: Preencha a 'Série da última NF-e'");
+        return;
+      }
+      const rules = nfeData.nfe_rules && nfeData.nfe_rules.length > 0 ? nfeData.nfe_rules : [];
+      if (rules.length === 0) {
+        setActiveModule("nfe");
+        setNfeTab("regras");
+        toast.error("NF-e: Cadastre ao menos uma Regra Fiscal.");
+        return;
+      }
+      for (let i = 0; i < rules.length; i++) {
+        const r = rules[i];
+        const isNormal = nfeData.regime === "normal";
+        if (isNormal && !r.cst_icms_contrib?.trim()) {
+          setActiveModule("nfe");
+          setNfeTab("regras");
+          toast.error(`NF-e (Regra ${i + 1}): Preencha o 'CST ICMS — Contribuinte'`);
+          return;
+        }
+        if (!isNormal && !r.csosn?.trim()) {
+          setActiveModule("nfe");
+          setNfeTab("regras");
+          toast.error(`NF-e (Regra ${i + 1}): Preencha o 'CSOSN — Contribuinte'`);
+          return;
+        }
+        if (!r.cfop_estadual?.trim()) {
+          setActiveModule("nfe");
+          setNfeTab("regras");
+          toast.error(`NF-e (Regra ${i + 1}): Preencha o 'CFOP de Saída Estadual'`);
+          return;
+        }
+        if (!r.cfop_interestadual?.trim()) {
+          setActiveModule("nfe");
+          setNfeTab("regras");
+          toast.error(`NF-e (Regra ${i + 1}): Preencha o 'CFOP de Saída Interestadual'`);
+          return;
+        }
+        if (!r.cst_pis?.trim()) {
+          setActiveModule("nfe");
+          setNfeTab("regras");
+          toast.error(`NF-e (Regra ${i + 1}): Preencha o 'CST PIS Saída'`);
+          return;
+        }
+        if (!r.cst_cofins?.trim()) {
+          setActiveModule("nfe");
+          setNfeTab("regras");
+          toast.error(`NF-e (Regra ${i + 1}): Preencha o 'CST COFINS Saída'`);
+          return;
+        }
+      }
+    }
+
+    if (safeMods.includes("nfce")) {
+      if (!nfeData.nfce_natureza_operacao?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha a 'Natureza da Operação NFC-e'");
+        return;
+      }
+      if (!nfeData.nfce_natureza_operacao_devolucao?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha a 'Natureza Operação NFC-e Devolução'");
+        return;
+      }
+      if (!nfeData.nfce_csc_id?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha o 'Token CSC / ID do Token (cIdToken)'");
+        return;
+      }
+      if (!nfeData.nfce_csc_codigo?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha o 'Código CSC (Token)'");
+        return;
+      }
+      if (!nfeData.nfce_ultima_nfe?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha a 'Última NFCe Emitida'");
+        return;
+      }
+      if (!nfeData.nfce_serie?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha o 'Número Série NFCe'");
+        return;
+      }
+      const isNormal = nfeData.regime === "normal";
+      if (isNormal && !nfeData.nfce_cst?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha o 'CST ICMS NFCe'");
+        return;
+      }
+      if (!isNormal && !nfeData.nfce_csosn?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha o 'CSOSN ICMS NFCe'");
+        return;
+      }
+      if (!nfeData.nfce_cfop?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha o 'CFOP NFCe'");
+        return;
+      }
+      if (!nfeData.nfce_cst_pis?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha o 'CST PIS Saída'");
+        return;
+      }
+      if (!nfeData.nfce_cst_cofins?.trim()) {
+        setActiveModule("nfe");
+        setNfeTab("nfce");
+        toast.error("NFC-e: Preencha o 'CST COFINS Saída'");
+        return;
+      }
+    }
+
+    if (safeMods.includes("nfse")) {
+      if (!nfseData.natureza_operacao_nfse?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Natureza Operação NFSe'");
+        return;
+      }
+      if (!nfseData.natureza_tributacao_rps?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Natureza Tributação RPS'");
+        return;
+      }
+      if (!nfseData.regime_especial_rps?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha o 'Regime Especial Tributação RPS'");
+        return;
+      }
+      if (!nfseData.situacao_tributaria?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Situação Tributária'");
+        return;
+      }
+      if (!nfseData.aprox_tributos_nacional?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Alíquota Valor Aprox. Tributos Nacional'");
+        return;
+      }
+      if (!nfseData.aprox_tributos_estadual?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Alíquota Valor Aprox. Tributos Estadual'");
+        return;
+      }
+      if (!nfseData.aprox_tributos_municipal?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Alíquota Valor Aprox. Tributos Municipal'");
+        return;
+      }
+      if (!nfseData.prefeitura_login?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha o 'Login Acesso Prefeitura'");
+        return;
+      }
+      if (!nfseData.prefeitura_senha?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Senha Acesso Prefeitura'");
+        return;
+      }
+      if (!nfseData.exigibilidade_iss?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Exigibilidade ISS'");
+        return;
+      }
+      if (!nfseData.tipo_tributacao?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha o 'Tipo Tributação'");
+        return;
+      }
+      if (!nfseData.codigo_item_lista_servico?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha o 'Código do item da lista de serviço'");
+        return;
+      }
+      if (!nfseData.codigo_nbs?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha o 'Código NBS (Somente números)'");
+        return;
+      }
+      if (!nfseData.codigo_contribuinte?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha o 'Código Contribuinte/Serviço Nacional'");
+        return;
+      }
+      if (!nfseData.codigo_cnae?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha o 'Código CNAE'");
+        return;
+      }
+      if (!nfseData.codigo_indicador_operacao_fornecimento?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha o 'Indicador da Operação de Fornecimento'");
+        return;
+      }
+      if (!nfseData.serie_rps?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Série NFSe Nacional(RPS)'");
+        return;
+      }
+      if (!nfseData.ultimo_rps?.trim()) {
+        setActiveModule("nfse");
+        toast.error("NFS-e: Preencha a 'Última NFSe Nacional(RPS) Emitida'");
+        return;
+      }
+    }
+
     if (!acceptChecked || !isValidFullName(acceptName) || !isValidCpf(acceptCpf)) {
       toast.error("Preencha o Termo de Responsabilidade: aceite, nome completo (nome e sobrenome) e CPF válido.");
       return;
@@ -1479,6 +1712,7 @@ function CadastraisTab({ form, update, xmlHints }: StepProps & { xmlHints?: Reco
       <div className="grid gap-4 md:grid-cols-2">
         <Field
           label="Número da última NF-e emitida"
+          required
           xmlHint={hints.ultima_nfe}
           onApplyHint={hints.ultima_nfe ? () => update("ultima_nfe", hints.ultima_nfe) : undefined}
         >
@@ -1486,6 +1720,7 @@ function CadastraisTab({ form, update, xmlHints }: StepProps & { xmlHints?: Reco
         </Field>
         <Field
           label="Série da última NF-e"
+          required
           xmlHint={hints.serie_nfe}
           onApplyHint={hints.serie_nfe ? () => update("serie_nfe", hints.serie_nfe) : undefined}
         >
@@ -2012,7 +2247,7 @@ function RuleCard({
 
           {!isNormal && (
             <>
-              <Field label="CSOSN — Contribuinte (Com IE)" {...hintFor("csosn")}>
+              <Field label="CSOSN — Contribuinte (Com IE)" required {...hintFor("csosn")}>
                 <Combobox options={csosnOpts} value={rule.csosn} onChange={(v) => upd("csosn", v)} placeholder="Selecione o CSOSN p/ contribuinte..." />
               </Field>
               <Field label="CSOSN — Não Contribuinte (Sem IE / Consumidor Final)" {...hintFor("csosn_nao_contrib")}>
@@ -2022,7 +2257,7 @@ function RuleCard({
           )}
           {isNormal && (
             <>
-              <Field label="CST ICMS — Contribuinte (Com IE)" {...hintFor("cst_icms_contrib")}>
+              <Field label="CST ICMS — Contribuinte (Com IE)" required {...hintFor("cst_icms_contrib")}>
                 <Combobox options={CST_ICMS_OPTIONS} value={rule.cst_icms_contrib} onChange={(v) => upd("cst_icms_contrib", v)} placeholder="Selecione o CST p/ contribuinte..." />
               </Field>
               <Field label="CST ICMS — Não Contribuinte (Sem IE / Consumidor Final)" {...hintFor("cst_icms_nao_contrib")}>
@@ -2042,7 +2277,7 @@ function RuleCard({
             </>
           )}
 
-          <Field label="CFOP de Saída Estadual" {...hintFor("cfop_estadual")}>
+          <Field label="CFOP de Saída Estadual" required {...hintFor("cfop_estadual")}>
             <Combobox
               options={CFOP_OPTIONS.filter((o) => o.value.startsWith("5") && !o.hint?.includes("CT-e"))}
               value={rule.cfop_estadual}
@@ -2050,7 +2285,7 @@ function RuleCard({
               placeholder="Ex.: 5102 - Venda de mercadoria"
             />
           </Field>
-          <Field label="CFOP de Saída Interestadual (Contribuinte)" {...hintFor("cfop_interestadual")}>
+          <Field label="CFOP de Saída Interestadual (Contribuinte)" required {...hintFor("cfop_interestadual")}>
             <Combobox
               options={CFOP_OPTIONS.filter((o) => o.value.startsWith("6") && !o.hint?.includes("CT-e") && !o.hint?.includes("Não Contrib."))}
               value={rule.cfop_interestadual}
@@ -2148,11 +2383,11 @@ function RuleCard({
 
       <Section title="PIS / COFINS — Saída">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="CST PIS Saída" {...hintFor("cst_pis")}>
+          <Field label="CST PIS Saída" required {...hintFor("cst_pis")}>
             <Combobox options={CST_PIS_COFINS_OPTIONS} value={rule.cst_pis} onChange={(v) => upd("cst_pis", v)} />
           </Field>
           <PercentField label="Alíquota PIS Saída" value={rule.aliquota_pis} onChange={(v) => upd("aliquota_pis", v)} {...hintFor("aliquota_pis")} />
-          <Field label="CST COFINS Saída" {...hintFor("cst_cofins")}>
+          <Field label="CST COFINS Saída" required {...hintFor("cst_cofins")}>
             <Combobox options={CST_PIS_COFINS_OPTIONS} value={rule.cst_cofins} onChange={(v) => upd("cst_cofins", v)} />
           </Field>
           <PercentField label="Alíquota COFINS Saída" value={rule.aliquota_cofins} onChange={(v) => upd("aliquota_cofins", v)} {...hintFor("aliquota_cofins")} />
@@ -2238,9 +2473,28 @@ function NfceBlock({ form, update }: StepProps) {
         </div>
       </Section>
 
+      <Section title="Natureza da Operação da NFC-e">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Natureza da Operação NFC-e" required help="Ex.: Venda a Consumidor">
+            <Input
+              value={form.nfce_natureza_operacao ?? ""}
+              onChange={(e) => update("nfce_natureza_operacao", e.target.value)}
+              placeholder="Ex.: Venda a Consumidor"
+            />
+          </Field>
+          <Field label="Natureza Operação NFC-e Devolução" required help="Ex.: Devolução de Venda NFC-e">
+            <Input
+              value={form.nfce_natureza_operacao_devolucao ?? ""}
+              onChange={(e) => update("nfce_natureza_operacao_devolucao", e.target.value)}
+              placeholder="Ex.: Devolução de Venda NFC-e"
+            />
+          </Field>
+        </div>
+      </Section>
+
       <Section title="Numeração e Série da NFC-e">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Número da última NFC-e emitida" help="Caso seja a primeira emissão neste PDV, informe 0.">
+          <Field label="Número da última NFC-e emitida" required help="Caso seja a primeira emissão neste PDV, informe 0.">
             <Input
               inputMode="numeric"
               value={form.nfce_ultima_nfe ?? ""}
@@ -2248,7 +2502,7 @@ function NfceBlock({ form, update }: StepProps) {
               placeholder="0"
             />
           </Field>
-          <Field label="Série da NFC-e" help="Série padrão geralmente é 1, 65 ou definida pelo cliente.">
+          <Field label="Série da NFC-e" required help="Série padrão geralmente é 1, 65 ou definida pelo cliente.">
             <Input
               inputMode="numeric"
               value={form.nfce_serie ?? ""}
@@ -2262,7 +2516,7 @@ function NfceBlock({ form, update }: StepProps) {
       <Section title="Regras Tributárias da NFC-e">
         <div className="grid gap-4 md:grid-cols-2">
           {!isNormal && (
-            <Field label="CSOSN Padrão NFC-e" className="md:col-span-2">
+            <Field label="CSOSN Padrão NFC-e" required className="md:col-span-2">
               <Combobox
                 options={csosnOpts}
                 value={form.nfce_csosn}
@@ -2272,7 +2526,7 @@ function NfceBlock({ form, update }: StepProps) {
           )}
 
           {isNormal && (
-            <Field label="CST ICMS Padrão NFC-e" className="md:col-span-2">
+            <Field label="CST ICMS Padrão NFC-e" required className="md:col-span-2">
               <Combobox
                 options={CST_ICMS_OPTIONS}
                 value={form.nfce_cst}
@@ -2281,7 +2535,7 @@ function NfceBlock({ form, update }: StepProps) {
             </Field>
           )}
 
-          <Field label="CFOP Padrão NFC-e (Saída Estadual)">
+          <Field label="CFOP Padrão NFC-e (Saída Estadual)" required>
             <Combobox
               options={CFOP_OPTIONS.filter((o) => o.value.startsWith("5") && !o.hint?.includes("CT-e"))}
               value={form.nfce_cfop}
@@ -2296,6 +2550,24 @@ function NfceBlock({ form, update }: StepProps) {
               value={form.nfce_cfop_entrada}
               onChange={(v) => update("nfce_cfop_entrada", v)}
               placeholder="Ex.: 1202 - Devolução de venda, 1102..."
+            />
+          </Field>
+
+          <Field label="CST PIS Saída NFC-e" required>
+            <Combobox
+              options={CST_PIS_COFINS_OPTIONS}
+              value={form.nfce_cst_pis}
+              onChange={(v) => update("nfce_cst_pis", v)}
+              placeholder="Selecione o CST PIS..."
+            />
+          </Field>
+
+          <Field label="CST COFINS Saída NFC-e" required>
+            <Combobox
+              options={CST_PIS_COFINS_OPTIONS}
+              value={form.nfce_cst_cofins}
+              onChange={(v) => update("nfce_cst_cofins", v)}
+              placeholder="Selecione o CST COFINS..."
             />
           </Field>
 

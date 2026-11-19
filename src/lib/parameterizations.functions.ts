@@ -86,7 +86,8 @@ const ALL_TYPES = ["nfe", "nfce", "mdfe", "cte", "nfse"] as const;
 const STATUSES = ["pendente", "em_andamento", "concluido"] as const;
 
 function primaryFromTypes(types: readonly (typeof ALL_TYPES)[number][]) {
-  return types.includes("mdfe") && !types.includes("nfe") ? "mdfe" : (types[0] ?? "nfe");
+  const arr = Array.isArray(types) ? types : [];
+  return arr.includes("mdfe") && !arr.includes("nfe") ? "mdfe" : (arr[0] ?? "nfe");
 }
 
 function toValidUuidOrNull(val?: string | null): string | null {

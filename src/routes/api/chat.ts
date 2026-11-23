@@ -302,6 +302,7 @@ DADOS DO VISITANTE IDENTIFICADO:
           model: aiGateway(defaultModel),
           system,
           messages: await convertToModelMessages(messages),
+          maxOutputTokens: 2500,
         });
 
         return result.toUIMessageStreamResponse({

@@ -155,7 +155,10 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
       qc.invalidateQueries({ queryKey: ["thread", threadId] });
     },
     onError: (err: Error) => {
-      toast.error("Erro na resposta do assistente: " + err.message);
+      const msg = err.message === "An error occurred."
+        ? "Instabilidade temporária na resposta da IA. Por favor, tente enviar novamente."
+        : "Erro na resposta do assistente: " + err.message;
+      toast.error(msg);
     },
   });
 

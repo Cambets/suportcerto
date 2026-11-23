@@ -741,12 +741,14 @@ export const PromptInput = ({
     }
 
     const onDragOver = (e: DragEvent) => {
-      if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes("Files")) {
+      const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
+      if (Array.isArray(types) && types.includes("Files")) {
         e.preventDefault();
       }
     };
     const onDrop = (e: DragEvent) => {
-      if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes("Files")) {
+      const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
+      if (Array.isArray(types) && types.includes("Files")) {
         e.preventDefault();
       }
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
@@ -767,12 +769,14 @@ export const PromptInput = ({
     }
 
     const onDragOver = (e: DragEvent) => {
-      if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes("Files")) {
+      const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
+      if (Array.isArray(types) && types.includes("Files")) {
         e.preventDefault();
       }
     };
     const onDrop = (e: DragEvent) => {
-      if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes("Files")) {
+      const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
+      if (Array.isArray(types) && types.includes("Files")) {
         e.preventDefault();
       }
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {

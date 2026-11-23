@@ -29,9 +29,9 @@ export function useKnowledge() {
     const term = search.toLowerCase();
     return entries.filter(
       (e: KnowledgeEntry) =>
-        e.title.toLowerCase().includes(term) ||
-        e.content.toLowerCase().includes(term) ||
-        e.tags?.some((t: string) => t.toLowerCase().includes(term)),
+        (e.title ?? "").toLowerCase().includes(term) ||
+        (e.content ?? "").toLowerCase().includes(term) ||
+        (Array.isArray(e.tags) ? e.tags : []).some((t: string) => (t ?? "").toLowerCase().includes(term)),
     );
   }, [entries, search]);
 

@@ -36,7 +36,8 @@ export const Route = createFileRoute("/_authenticated/rejeicoes")({
 });
 
 function getBadgeVariant(codigo: string, msg: string) {
-  if (codigo === "120" || msg.toLowerCase().includes("alerta")) {
+  const safeMsg = (msg ?? "").toLowerCase();
+  if (codigo === "120" || safeMsg.includes("alerta")) {
     return {
       label: `AUTORIZADO C/ ALERTA ${codigo}`,
       className: "bg-cyan-100 text-cyan-800 border-cyan-300 dark:bg-cyan-950/60 dark:text-cyan-300",
@@ -50,7 +51,7 @@ function getBadgeVariant(codigo: string, msg: string) {
       icon: FileCheck2,
     };
   }
-  if (msg.toLowerCase().includes("denegad") || ["110", "301", "302", "303"].includes(codigo)) {
+  if (safeMsg.includes("denegad") || ["110", "301", "302", "303"].includes(codigo)) {
     return {
       label: `USO DENEGADO ${codigo}`,
       className: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300",
@@ -88,9 +89,9 @@ function RejeicoesPage() {
     if (!search.trim()) return SEFAZ_CONCEITOS;
     const q = search.toLowerCase();
     return SEFAZ_CONCEITOS.filter((c) => {
-      if (c.titulo.toLowerCase().includes(q) || c.secao.toLowerCase().includes(q)) return true;
-      return Object.entries(c.conteudo).some(
-        ([k, v]) => k.toLowerCase().includes(q) || v.toLowerCase().includes(q)
+      if ((c.titulo ?? "").toLowerCase().includes(q) || (c.secao ?? "").toLowerCase().includes(q)) return true;
+      return Object.entries(c.conteudo || {}).some(
+        ([k, v]) => (k ?? "").toLowerCase().includes(q) || (v ?? "").toLowerCase().includes(q)
       );
     });
   }, [search]);

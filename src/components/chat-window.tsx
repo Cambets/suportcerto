@@ -405,7 +405,8 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
     <div
       className="flex flex-col h-full relative"
       onDragOver={(e) => {
-        if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes("Files")) {
+        const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
+        if (Array.isArray(types) && types.includes("Files")) {
           e.preventDefault();
           setIsDragging(true);
         }

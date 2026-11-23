@@ -69,13 +69,13 @@ export function searchRejeicoes(query: string, categoria?: string): SefazRejeica
     }
     if (!q) return true;
     return (
-      r.codigo.toLowerCase().includes(q) ||
-      r.mensagem_oficial_sefaz.toLowerCase().includes(q) ||
-      r.causa_provavel.toLowerCase().includes(q) ||
-      r.como_resolver.toLowerCase().includes(q) ||
-      r.passo_a_passo_erp.toLowerCase().includes(q) ||
-      r.categoria.toLowerCase().includes(q) ||
-      r.modelos.toLowerCase().includes(q)
+      (r.codigo ?? "").toLowerCase().includes(q) ||
+      (r.mensagem_oficial_sefaz ?? "").toLowerCase().includes(q) ||
+      (r.causa_provavel ?? "").toLowerCase().includes(q) ||
+      (r.como_resolver ?? "").toLowerCase().includes(q) ||
+      (r.passo_a_passo_erp ?? "").toLowerCase().includes(q) ||
+      (r.categoria ?? "").toLowerCase().includes(q) ||
+      (r.modelos ?? "").toLowerCase().includes(q)
     );
   });
 }

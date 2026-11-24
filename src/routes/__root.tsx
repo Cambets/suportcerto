@@ -32,10 +32,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold">Algo deu errado</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-        <button onClick={reset} className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground">
-          Tentar de novo
-        </button>
+        <p className="mt-2 text-sm text-muted-foreground">{error?.message || "Ocorreu um erro inesperado."}</p>
+        <div className="mt-4 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={reset}
+            className="rounded-md bg-primary px-4 py-2 text-primary-foreground text-sm font-medium hover:bg-primary/90 transition cursor-pointer"
+          >
+            Tentar de novo
+          </button>
+          <a
+            href="/chat"
+            className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition"
+          >
+            Voltar ao chat
+          </a>
+        </div>
       </div>
     </div>
   ),

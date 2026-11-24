@@ -257,7 +257,7 @@ ${Object.entries(c.conteudo)
 
               <div className="grid gap-3.5">
                 {filteredConceitos.map((c, idx) => {
-                  const is120 = c.secao.includes("120");
+                  const is120 = Boolean(c.secao && typeof c.secao === "string" && c.secao.includes("120"));
                   return (
                     <div
                       key={idx}
@@ -306,9 +306,9 @@ ${Object.entries(c.conteudo)
                           <div
                             key={rotulo}
                             className={`p-2.5 rounded-lg border ${
-                              rotulo.includes("orientar")
+                              typeof rotulo === "string" && rotulo.includes("orientar")
                                 ? "sm:col-span-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200"
-                                : rotulo.includes("Diferença") || rotulo.includes("O que é")
+                                : typeof rotulo === "string" && (rotulo.includes("Diferença") || rotulo.includes("O que é"))
                                 ? "sm:col-span-2 bg-background/80 border-border/40"
                                 : "bg-background/80 border-border/40"
                             }`}

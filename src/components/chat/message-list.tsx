@@ -1,3 +1,4 @@
+import React from "react";
 import { type UIMessage } from "ai";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
@@ -14,6 +15,32 @@ const getMessageText = (m: UIMessage) =>
 
 const getMessageFiles = (m: UIMessage) =>
   (m.parts?.filter((p: any) => p.type === "file") as any[]) || [];
+
+class MessageErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallbackText?: string },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.warn("[MessageErrorBoundary] Message render failed, displaying fallback:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 font-sans">
+          {this.props.fallbackText || "Ocorreu um erro ao formatar a resposta."}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function MessageList({ messages, isStreaming, status }: MessageListProps) {
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
@@ -68,7 +95,11 @@ export function MessageList({ messages, isStreaming, status }: MessageListProps)
                   })}
                 </div>
               )}
-              {text && <MessageResponse>{text}</MessageResponse>}
+              {text && (
+                <MessageErrorBoundary fallbackText={text}>
+                  <MessageResponse>{text}</MessageResponse>
+                </MessageErrorBoundary>
+              )}
             </MessageContent>
           </Message>
         );

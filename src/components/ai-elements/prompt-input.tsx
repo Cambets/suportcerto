@@ -511,6 +511,20 @@ export type PromptInputProps = Omit<
   ) => void | Promise<void>;
 };
 
+function hasFilesType(types: unknown): boolean {
+  if (!types) return false;
+  if (Array.isArray(types)) return types.includes("Files");
+  if (typeof (types as any).contains === "function") return (types as any).contains("Files");
+  if (typeof (types as any).includes === "function") return (types as any).includes("Files");
+  try {
+    const len = (types as any).length;
+    for (let i = 0; i < len; i++) {
+      if ((types as any)[i] === "Files") return true;
+    }
+  } catch {}
+  return false;
+}
+
 export const PromptInput = ({
   className,
   accept,
@@ -741,14 +755,12 @@ export const PromptInput = ({
     }
 
     const onDragOver = (e: DragEvent) => {
-      const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
-      if (Array.isArray(types) && types.includes("Files")) {
+      if (hasFilesType(e.dataTransfer?.types)) {
         e.preventDefault();
       }
     };
     const onDrop = (e: DragEvent) => {
-      const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
-      if (Array.isArray(types) && types.includes("Files")) {
+      if (hasFilesType(e.dataTransfer?.types)) {
         e.preventDefault();
       }
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
@@ -769,14 +781,12 @@ export const PromptInput = ({
     }
 
     const onDragOver = (e: DragEvent) => {
-      const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
-      if (Array.isArray(types) && types.includes("Files")) {
+      if (hasFilesType(e.dataTransfer?.types)) {
         e.preventDefault();
       }
     };
     const onDrop = (e: DragEvent) => {
-      const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
-      if (Array.isArray(types) && types.includes("Files")) {
+      if (hasFilesType(e.dataTransfer?.types)) {
         e.preventDefault();
       }
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {

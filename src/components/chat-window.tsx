@@ -44,6 +44,20 @@ interface ChatWindowProps {
 
 
 
+function hasFilesType(types: unknown): boolean {
+  if (!types) return false;
+  if (Array.isArray(types)) return types.includes("Files");
+  if (typeof (types as any).contains === "function") return (types as any).contains("Files");
+  if (typeof (types as any).includes === "function") return (types as any).includes("Files");
+  try {
+    const len = (types as any).length;
+    for (let i = 0; i < len; i++) {
+      if ((types as any)[i] === "Files") return true;
+    }
+  } catch {}
+  return false;
+}
+
 export function ChatWindow(props: ChatWindowProps) {
   return (
     <PromptInputProvider>
@@ -411,8 +425,7 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
     <div
       className="flex flex-col h-full relative"
       onDragOver={(e) => {
-        const types = e.dataTransfer?.types ? Array.from(e.dataTransfer.types) : [];
-        if (Array.isArray(types) && types.includes("Files")) {
+        if (hasFilesType(e.dataTransfer?.types)) {
           e.preventDefault();
           setIsDragging(true);
         }

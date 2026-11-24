@@ -141,6 +141,10 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
     messages,
     sendMessage,
     status,
+    stop,
+    clearError,
+    regenerate,
+    error,
   } = useChat({
     id: threadId,
     messages: initialMessages.map(m => ({
@@ -162,7 +166,8 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
     },
   });
 
-  const isLoading = status !== "ready";
+  const isGenerating = status === "submitted" || status === "streaming";
+  const isLoading = isGenerating;
   const isEmpty = messages.length === 0;
 
   const { data: threadDetail } = useThreadDetail(threadId);
@@ -373,6 +378,7 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
   };
 
   const handleSubmit = (text: string) => {
+    clearError?.();
     const hasText = text.trim().length > 0;
     if (!hasText && attachments.length === 0) return;
 
@@ -535,6 +541,34 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
               e.target.value = "";
             }}
           />
+          {status === "error" && (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 mb-2 rounded-xl bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+              <span>Houve uma oscilação na resposta da IA.</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2.5 text-xs border-destructive/30 hover:bg-destructive/15 text-destructive"
+                  onClick={() => {
+                    clearError?.();
+                    regenerate?.();
+                  }}
+                >
+                  Tentar novamente
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => clearError?.()}
+                >
+                  Dispensar
+                </Button>
+              </div>
+            </div>
+          )}
           <PromptInput
             onSubmit={({ text }) => handleSubmit(text)}
             className="bg-muted/50 border-none shadow-none focus-within:ring-1 focus-within:ring-primary/20"
@@ -593,11 +627,13 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
                 )}
               </PromptInputTools>
               <PromptInputSubmit
-                disabled={isLoading || isTranscribingFile || (!textInput.value.trim() && attachments.length === 0)}
+                status={status}
+                onStop={stop}
+                disabled={isTranscribingFile || (!textInput.value.trim() && attachments.length === 0)}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                {isGenerating ? (
+                  <Square className="h-4 w-4" />
                 ) : (
                   <Send className="h-4 w-4" />
                 )}

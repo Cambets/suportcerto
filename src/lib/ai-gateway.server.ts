@@ -73,10 +73,9 @@ function createSafeSseStream(originalBody: ReadableStream<Uint8Array>): Readable
 
 function createGeminiResilientFetch() {
   const CANDIDATES = [
-    "gemini-flash-lite-latest",
-    "gemini-3.5-flash-lite",
     "gemini-3.6-flash",
-    "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-flash-lite-latest",
   ];
 
   return async (url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -97,7 +96,7 @@ function createGeminiResilientFetch() {
       return fetch(url, init);
     }
 
-    const requestedModel = parsedBody.model || "gemini-flash-lite-latest";
+    const requestedModel = parsedBody.model || "gemini-3.6-flash";
     const modelsToTry = [
       requestedModel,
       ...CANDIDATES.filter((m) => m !== requestedModel),
@@ -161,7 +160,7 @@ export function createAiProvider() {
         apiKey: geminiKey,
         fetch: createGeminiResilientFetch(),
       }),
-      defaultModel: "gemini-flash-lite-latest",
+      defaultModel: "gemini-3.6-flash",
     };
   }
 

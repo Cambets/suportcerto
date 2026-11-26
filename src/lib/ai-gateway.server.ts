@@ -44,9 +44,16 @@ function createSafeSseStream(originalBody: ReadableStream<Uint8Array>): Readable
           hasSentFinishReason = true;
         }
 
-        // Se o Google enviar um array JSON cru de erro no meio do stream (ex: 503 high demand)
-        if (text.includes('"error"') && (text.includes('503') || text.includes('UNAVAILABLE') || text.includes('high demand'))) {
-          console.warn("[SafeGeminiStream] Google 503/UNAVAILABLE detectado no stream. Finalizando stream de forma limpa.");
+        // Se o Google enviar um array JSON cru de erro no meio do stream (ex: 503 high demand / 429 quota)
+        if (
+          text.includes('"error"') &&
+          (text.includes("503") ||
+            text.includes("429") ||
+            text.includes("UNAVAILABLE") ||
+            text.includes("RESOURCE_EXHAUSTED") ||
+            text.includes("high demand"))
+        ) {
+          console.warn("[SafeGeminiStream] Google 503/429 detectado no stream. Finalizando stream de forma limpa.");
           if (!hasSentFinishReason) {
             controller.enqueue(encoder.encode(finishPayload));
             hasSentFinishReason = true;
@@ -73,9 +80,11 @@ function createSafeSseStream(originalBody: ReadableStream<Uint8Array>): Readable
 
 function createGeminiResilientFetch() {
   const CANDIDATES = [
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-lite-latest",
     "gemini-3.6-flash",
     "gemini-3.5-flash",
-    "gemini-flash-lite-latest",
   ];
 
   return async (url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -96,7 +105,7 @@ function createGeminiResilientFetch() {
       return fetch(url, init);
     }
 
-    const requestedModel = parsedBody.model || "gemini-3.6-flash";
+    const requestedModel = parsedBody.model || "gemini-3-flash-preview";
     const modelsToTry = [
       requestedModel,
       ...CANDIDATES.filter((m) => m !== requestedModel),
@@ -109,8 +118,8 @@ function createGeminiResilientFetch() {
         const bodyWithModel = JSON.stringify({ ...parsedBody, model });
         const res = await fetch(url, { ...init, body: bodyWithModel });
 
-        // Se status 5xx, tenta o próximo modelo
-        if (res.status >= 500) {
+        // Se status 429 (cota/rate limit), 404 (modelo indisponível) ou 5xx, tenta o próximo modelo
+        if (res.status === 429 || res.status === 404 || res.status >= 500) {
           console.warn(`[GeminiFetch] Modelo "${model}" retornou HTTP ${res.status}. Tentando modelo reserva...`);
           lastResponse = res;
           continue;
@@ -128,12 +137,17 @@ function createGeminiResilientFetch() {
           });
         }
 
-        // Se a resposta for JSON mas contiver erro 503 disfarçado do Google
+        // Se a resposta for JSON mas contiver erro 503/429 disfarçado do Google
         if (contentType.includes("application/json")) {
           const clone = res.clone();
           const text = await clone.text();
-          if (text.includes('"code":503') || text.includes('"status":"UNAVAILABLE"')) {
-            console.warn(`[GeminiFetch] Modelo "${model}" retornou erro 503 JSON. Tentando modelo reserva...`);
+          if (
+            text.includes('"code":503') ||
+            text.includes('"code":429') ||
+            text.includes('"status":"UNAVAILABLE"') ||
+            text.includes('"status":"RESOURCE_EXHAUSTED"')
+          ) {
+            console.warn(`[GeminiFetch] Modelo "${model}" retornou erro 503/429 JSON. Tentando modelo reserva...`);
             lastResponse = res;
             continue;
           }
@@ -160,7 +174,7 @@ export function createAiProvider() {
         apiKey: geminiKey,
         fetch: createGeminiResilientFetch(),
       }),
-      defaultModel: "gemini-3.6-flash",
+      defaultModel: "gemini-3-flash-preview",
     };
   }
 

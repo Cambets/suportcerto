@@ -565,7 +565,7 @@ function ChatWindowContent({ threadId, initialMessages = [], onUpdated }: ChatWi
                   className="h-7 px-2.5 text-xs border-destructive/30 hover:bg-destructive/15 text-destructive"
                   onClick={() => {
                     clearError?.();
-                    regenerate?.();
+                    regenerate?.({ body: { mode } });
                   }}
                 >
                   Tentar novamente
